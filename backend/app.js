@@ -31,7 +31,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
 
 let databaseReadyPromise;
@@ -50,6 +49,7 @@ async function ensureDatabase() {
       throw error;
     });
   }
+
   await seedReadyPromise;
 }
 
@@ -58,6 +58,7 @@ app.get("/", async (req, res) => {
     await ensureDatabase();
     res.json({ message: "SkillSwap API is running" });
   } catch (error) {
+    console.error("Root database initialization failed:", error);
     res.status(500).json({ message: "Database initialization failed" });
   }
 });
@@ -67,6 +68,7 @@ app.get("/api/health", async (req, res) => {
     await ensureDatabase();
     res.json({ ok: true, service: "skillswap-api", database: "mongodb" });
   } catch (error) {
+    console.error("Health database initialization failed:", error);
     res.status(500).json({ ok: false, message: "Database initialization failed" });
   }
 });
@@ -76,7 +78,7 @@ app.use(async (req, res, next) => {
     await ensureDatabase();
     next();
   } catch (error) {
-    console.error("Database initialization failed:", error.message);
+    console.error("Database initialization failed:", error);
     res.status(500).json({ message: "Database initialization failed" });
   }
 });
@@ -92,7 +94,9 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/connections", connectionRoutes);
 
 app.use((req, res) => {
-  res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
+  res.status(404).json({
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+  });
 });
 
 export default app;
