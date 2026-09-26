@@ -1,4 +1,4 @@
-const PRODUCTION_API_URL = "/api";
+const PRODUCTION_API_URL = "https://skillswap-delta-tan.vercel.app";
 
 const API_URL = (
   import.meta.env.DEV
