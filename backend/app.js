@@ -18,7 +18,20 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
+const allowedOrigin =
+  process.env.FRONTEND_URL ||
+  "https://skillswap-59xb-eeei74mqa-titan-4daf.vercel.app";
+
+const corsOptions = {
+  origin: allowedOrigin,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
 
 let databaseReadyPromise;
