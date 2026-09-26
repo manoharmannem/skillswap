@@ -1,0 +1,29 @@
+import { useEffect, useMemo, useState } from "react";
+import { Plus, X, Video } from "lucide-react";
+import { api } from "../lib/api.js";
+import { useAuth } from "../context/AuthContext.jsx";
+import { useConnections } from "../context/ConnectionsContext.jsx";
+import { useToast } from "../context/ToastContext.jsx";
+
+export default function Meetings() {
+  const { user } = useAuth();
+  const { acceptedConnections } = useConnections();
+  const toast = useToast();
+  const [meetings, setMeetings] = useState([]); const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ title: "", partnerId: "", skill: "", date: "", time: "", meetingUrl: "" });
+  const partners = useMemo(() => acceptedConnections.map((c) => c.fromEmail === user?.email ? c.toUser : c.fromUser).filter(Boolean), [acceptedConnections, user]);
+  const skills = useMemo(() => Array.from(new Set(partners.flatMap((p) => [...(p.skills || []), ...(p.learningSkills || [])]))), [partners]);
+  async function load() { try { const d = await api("/api/meetings"); setMeetings(d.meetings || []); } catch (e) { toast.error(e.message); } }
+  useEffect(() => { load(); }, []);
+  async function handleSchedule(e) { e.preventDefault(); if (!form.title.trim() || !form.partnerId || !form.skill || !form.date || !form.time) return toast.error("Fill in title, connected member, skill, date and time."); try { await api("/api/meetings", { method: "POST", body: JSON.stringify({ title: form.title.trim(), withUserId: form.partnerId, skill: form.skill, date: form.date, time: form.time, duration: 60, meetingUrl: form.meetingUrl.trim() }) }); toast.success("Meeting created. The other member will receive an email when SMTP is configured."); setForm({ title: "", partnerId: "", skill: skills[0] || "", date: "", time: "", meetingUrl: "" }); setShowForm(false); load(); } catch (e) { toast.error(e.message); } }
+  async function cancelMeeting(id) { try { await api(`/api/meetings/${id}`, { method: "DELETE" }); toast.success("Meeting cancelled"); load(); } catch (e) { toast.error(e.message); } }
+  const normalized = meetings.map((m) => ({ ...m, id: m._id, withUser: m.learner?._id === user?.id ? m.tutor?.name : m.learner?.name }));
+  const upcoming = normalized.filter((m) => m.status === "upcoming"); const past = normalized.filter((m) => m.status === "completed" || m.status === "cancelled");
+  return <div><p className="page-eyebrow">Sessions</p><h1 className="page-title">Meetings</h1><p className="page-sub">Schedule sessions with accepted connections. Both members get the meeting details by email when SMTP is configured.</p>
+    <div className="quick-actions" style={{ marginTop: "1.5rem" }}><button className="btn btn-primary" onClick={() => setShowForm((v) => !v)} disabled={!partners.length}>{showForm ? <X size={16}/> : <Plus size={16}/>} {showForm ? "Close" : "Schedule a meeting"}</button></div>
+    {!partners.length && <div className="panel" style={{ marginTop: "1rem", padding: "1rem" }}>You need an accepted connection before scheduling a private meeting.</div>}
+    {showForm && <form onSubmit={handleSchedule} className="panel" style={{ marginTop: "1.25rem", padding: "1.5rem" }}><div className="card-grid"><label className="field"><span className="field-label">Session title</span><input className="field-input" placeholder="React Q&A" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}/></label><label className="field"><span className="field-label">With</span><select className="field-select" value={form.partnerId} onChange={(e) => setForm({ ...form, partnerId: e.target.value })}><option value="">Select a connection</option>{partners.map((p) => <option key={p._id || p.id} value={p._id || p.id}>{p.name || p.fullName}</option>)}</select></label><label className="field"><span className="field-label">Skill</span><select className="field-select" value={form.skill} onChange={(e) => setForm({ ...form, skill: e.target.value })}><option value="">Select a skill</option>{skills.map((s) => <option key={s}>{s}</option>)}</select></label><label className="field"><span className="field-label">Date</span><input type="date" className="field-input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })}/></label><label className="field"><span className="field-label">Time</span><input type="time" className="field-input" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })}/></label><label className="field"><span className="field-label">Meeting link (optional)</span><input className="field-input" placeholder="https://meet.google.com/..." value={form.meetingUrl} onChange={(e) => setForm({ ...form, meetingUrl: e.target.value })}/></label></div><button type="submit" className="btn btn-primary">Confirm meeting</button></form>}
+    <p className="section-title" style={{ marginTop: "2rem" }}>Upcoming</p><div style={{ marginTop: ".75rem" }}>{upcoming.length ? upcoming.map((m) => <div key={m.id} className="list-row"><div><p className="list-row-title">{m.title}</p><p className="list-row-sub">with {m.withUser} · {m.skill} · {m.date} at {m.time}</p></div><div style={{ display: "flex", gap: ".5rem" }}>{m.meetingUrl && <a className="btn btn-secondary btn-sm" href={m.meetingUrl} target="_blank" rel="noreferrer"><Video size={15}/> Join</a>}<button className="btn btn-danger btn-sm" onClick={() => cancelMeeting(m.id)}>Cancel</button></div></div>) : <p className="empty-note">Nothing scheduled yet.</p>}</div>
+    <p className="section-title" style={{ marginTop: "2rem" }}>Past</p><div style={{ marginTop: ".75rem" }}>{past.length ? past.map((m) => <div key={m.id} className="list-row"><div><p className="list-row-title">{m.title}</p><p className="list-row-sub">with {m.withUser} · {m.skill} · {m.date} at {m.time}</p></div><span className="badge">{m.status}</span></div>) : <p className="empty-note">No past meetings.</p>}</div>
+  </div>;
+}

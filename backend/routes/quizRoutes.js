@@ -1,0 +1,11 @@
+import express from "express";
+import { getQuizzes, getQuizById, createQuiz, updateQuiz, deleteQuiz, submitQuiz } from "../controllers/quizController.js";
+import { requireAuth } from "../middleware/authMiddleware.js";
+const router = express.Router();
+router.get("/", requireAuth, getQuizzes);
+router.get("/:id", requireAuth, getQuizById);
+router.post("/", requireAuth, createQuiz);
+router.post("/:id/attempt", requireAuth, submitQuiz);
+router.put("/:id", requireAuth, updateQuiz);
+router.delete("/:id", requireAuth, deleteQuiz);
+export default router;

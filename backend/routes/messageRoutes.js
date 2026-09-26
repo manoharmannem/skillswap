@@ -1,0 +1,10 @@
+import express from "express";
+import { sendMessage, getConversation, getConversations, markMessageAsRead } from "../controllers/messageController.js";
+import { requireAuth } from "../middleware/authMiddleware.js";
+const router = express.Router();
+router.use(requireAuth);
+router.get("/", getConversations);
+router.post("/", sendMessage);
+router.get("/:otherUserId", getConversation);
+router.put("/:id/read", markMessageAsRead);
+export default router;

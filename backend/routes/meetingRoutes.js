@@ -1,0 +1,10 @@
+import express from "express";
+import { getMeetings, createMeeting, updateMeeting, deleteMeeting } from "../controllers/meetingController.js";
+import { requireAuth } from "../middleware/authMiddleware.js";
+const router = express.Router();
+router.use(requireAuth);
+router.get("/", getMeetings);
+router.post("/", createMeeting);
+router.put("/:id", updateMeeting);
+router.delete("/:id", deleteMeeting);
+export default router;
