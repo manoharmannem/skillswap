@@ -18,12 +18,25 @@ dotenv.config();
 
 const app = express();
 
-const allowedOrigin =
-  process.env.FRONTEND_URL ||
-  "https://skillswap-59xb-eeei74mqa-titan-4daf.vercel.app";
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+
+  return (
+    /^https:\/\/skillswap(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(origin) ||
+    /^http:\/\/localhost(?::\d+)?$/i.test(origin) ||
+    /^http:\/\/127\.0\.0\.1(?::\d+)?$/i.test(origin) ||
+    origin === process.env.FRONTEND_URL
+  );
+};
 
 const corsOptions = {
-  origin: allowedOrigin,
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS origin not allowed"));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
