@@ -1,8 +1,9 @@
-const PRODUCTION_API_URL =
-  "https://skillswap-gh5gik06y-titan-4daf.vercel.app";
+const PRODUCTION_API_URL = "/api";
 
 const API_URL = (
-  import.meta.env.VITE_API_URL || PRODUCTION_API_URL
+  import.meta.env.DEV
+    ? (import.meta.env.VITE_API_URL || "http://localhost:5000")
+    : PRODUCTION_API_URL
 ).replace(/\/$/, "");
 
 const TOKEN_KEY = "skillswap:token";
