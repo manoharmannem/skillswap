@@ -11,6 +11,14 @@ const practiceModuleSchema = new mongoose.Schema(
       id: { type: String, required: true },
       title: { type: String, required: true },
       description: { type: String, default: "" },
+      lesson: {
+        intro: { type: String, default: "" },
+        sections: [{
+          heading: { type: String, default: "" },
+          body: { type: String, default: "" },
+        }],
+        example: { type: String, default: "" },
+      },
       completed: { type: Boolean, default: false },
     }],
   },
