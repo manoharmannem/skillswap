@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
-import { CheckCircle2, ChevronDown, Circle } from "lucide-react";
+import { CheckCircle2, ChevronDown, Circle, FileText, LockKeyhole, X } from "lucide-react";
 
 const filters = ["All", "Not started", "Completed"];
 
@@ -10,6 +10,9 @@ export default function Practice() {
   const toast = useToast();
   const [filter, setFilter] = useState("All");
   const [openSkill, setOpenSkill] = useState(null);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [canComplete, setCanComplete] = useState(false);
+  const lessonRef = useRef(null);
 
   const modules = user?.practiceModules || [];
 
@@ -20,19 +23,62 @@ export default function Practice() {
     return filter === "Completed" ? completed : filter === "Not started" ? !completed : true;
   });
 
-  async function toggleTopic(moduleId, topicId) {
+  useEffect(() => {
+    if (!selectedTopic) return undefined;
+    setCanComplete(Boolean(selectedTopic.completed));
+    const node = lessonRef.current;
+    if (!node) return undefined;
+
+    const onScroll = () => {
+      const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 24;
+      if (atBottom) setCanComplete(true);
+    };
+
+    node.addEventListener("scroll", onScroll);
+    onScroll();
+    return () => node.removeEventListener("scroll", onScroll);
+  }, [selectedTopic]);
+
+  function openLesson(module, topic) {
+    setOpenSkill(module.id);
+    setSelectedTopic({
+      moduleId: module.id,
+      skill: module.skill,
+      moduleTitle: module.description,
+      ...topic,
+    });
+    setCanComplete(Boolean(topic.completed));
+  }
+
+  async function completeTopic() {
+    if (!selectedTopic || !canComplete) return;
+
     const updated = modules.map((module) => {
-      if (module.id !== moduleId) return module;
+      if (module.id !== selectedTopic.moduleId) return module;
       const topics = (module.topics || []).map((topic) =>
-        topic.id === topicId ? { ...topic, completed: !topic.completed } : topic
+        topic.id === selectedTopic.id ? { ...topic, completed: true } : topic
       );
       return { ...module, topics, completed: topics.length > 0 && topics.every((topic) => topic.completed) };
     });
 
     const result = await updatePracticeModules(updated);
-    if (result.error) toast.error(result.error);
-    else toast.success("Practice progress saved");
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    const updatedModule = updated.find((module) => module.id === selectedTopic.moduleId);
+    const moduleCompleted = updatedModule?.topics?.length > 0 && updatedModule.topics.every((topic) => topic.completed);
+
+    setSelectedTopic((current) => current ? { ...current, completed: true } : current);
+    toast.success(moduleCompleted ? "Module completed! You finished every topic in this skill." : "Topic completed. Continue to the next lesson.");
   }
+
+  const selectedLesson = useMemo(() => selectedTopic?.lesson || {
+    intro: "Read this lesson from top to bottom, then complete the checkpoint.",
+    sections: [],
+    example: "",
+  }, [selectedTopic]);
 
   return (
     <div>
@@ -40,7 +86,7 @@ export default function Practice() {
       <h1 className="page-title">Practice</h1>
       <p className="page-sub">
         Only the skills you selected under “Skills you want to learn” appear here.
-        Open a skill to see its modules and complete each topic as you learn.
+        Open a skill, choose a topic, read the lesson document, and complete it only after reaching the end.
       </p>
 
       <div className="quick-actions" style={{ marginTop: "1.5rem" }}>
@@ -64,8 +110,11 @@ export default function Practice() {
 
           return (
             <div key={m.id} className="panel" style={{ padding: "1.25rem" }}>
-              <button type="button" onClick={() => setOpenSkill(isOpen ? null : m.id)}
-                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", textAlign: "left", background: "none", border: 0, padding: 0, color: "inherit", cursor: "pointer" }}>
+              <button
+                type="button"
+                onClick={() => setOpenSkill(isOpen ? null : m.id)}
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", textAlign: "left", background: "none", border: 0, padding: 0, color: "inherit", cursor: "pointer" }}
+              >
                 <span style={{ minWidth: 0 }}>
                   <span style={{ display: "block", fontWeight: 600, fontSize: "1.05rem" }}>{m.skill}</span>
                   <span className="chip-static" style={{ marginTop: ".45rem", display: "inline-block" }}>{m.level}</span>
@@ -81,22 +130,103 @@ export default function Practice() {
 
               {isOpen && (
                 <div style={{ marginTop: "1.15rem", borderTop: "1px solid var(--border)", paddingTop: ".9rem" }}>
-                  {topics.map((topic) => (
-                    <button key={topic.id} type="button" onClick={() => toggleTopic(m.id, topic.id)}
-                      style={{ width: "100%", display: "flex", alignItems: "flex-start", gap: ".7rem", padding: ".85rem .15rem", textAlign: "left", background: "none", border: 0, borderBottom: "1px solid var(--border)", color: "inherit", cursor: "pointer" }}>
+                  {topics.map((topic, index) => (
+                    <button
+                      key={topic.id}
+                      type="button"
+                      onClick={() => openLesson(m, topic)}
+                      style={{ width: "100%", display: "flex", alignItems: "flex-start", gap: ".7rem", padding: ".9rem .15rem", textAlign: "left", background: "none", border: 0, borderBottom: "1px solid var(--border)", color: "inherit", cursor: "pointer" }}
+                    >
                       {topic.completed ? <CheckCircle2 size={19} style={{ flexShrink: 0 }} /> : <Circle size={19} style={{ flexShrink: 0 }} />}
-                      <span>
-                        <span style={{ display: "block", fontWeight: 500, textDecoration: topic.completed ? "line-through" : "none" }}>{topic.title}</span>
+                      <span style={{ minWidth: 0, flex: 1 }}>
+                        <span style={{ display: "block", fontWeight: 600 }}>{index + 1}. {topic.title}</span>
                         <span style={{ display: "block", marginTop: ".25rem", fontSize: ".78rem", color: "var(--muted-foreground)" }}>{topic.description}</span>
                       </span>
+                      <FileText size={17} style={{ flexShrink: 0, opacity: .65 }} />
                     </button>
                   ))}
+                  {skillCompleted && (
+                    <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: "12px", border: "1px solid var(--border)", background: "var(--surface-muted, #f6f8fb)" }}>
+                      <strong>🎉 Module completed!</strong>
+                      <div style={{ marginTop: ".25rem", fontSize: ".85rem", color: "var(--muted-foreground)" }}>
+                        You finished every topic in the {m.skill} learning path.
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {selectedTopic && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={selectedTopic.title}
+          style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(10,18,30,.68)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+          onClick={(event) => { if (event.target === event.currentTarget) setSelectedTopic(null); }}
+        >
+          <div style={{ width: "min(900px, 100%)", height: "min(88vh, 820px)", background: "#eef1f5", borderRadius: "16px", boxShadow: "0 24px 80px rgba(0,0,0,.25)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: ".8rem 1rem", background: "#ffffff", borderBottom: "1px solid #d8dde5", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: ".6rem", minWidth: 0 }}>
+                <FileText size={18} />
+                <span style={{ fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedTopic.skill} • Lesson</span>
+              </div>
+              <button type="button" onClick={() => setSelectedTopic(null)} aria-label="Close lesson" style={{ border: 0, background: "transparent", cursor: "pointer", padding: ".3rem" }}><X size={20} /></button>
+            </div>
+
+            <div ref={lessonRef} style={{ overflowY: "auto", flex: 1, padding: "2rem 1rem" }}>
+              <article style={{ width: "min(720px, 100%)", minHeight: "100%", margin: "0 auto", background: "#fff", padding: "clamp(1.5rem, 4vw, 3rem)", boxShadow: "0 5px 22px rgba(20,30,45,.10)", color: "#182334" }}>
+                <div style={{ fontSize: ".72rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#667085", marginBottom: ".7rem" }}>SkillSwap Learning Document</div>
+                <h2 style={{ margin: 0, fontSize: "clamp(1.5rem, 4vw, 2.1rem)" }}>{selectedTopic.title}</h2>
+                <div style={{ marginTop: ".6rem", fontSize: ".85rem", color: "#667085" }}>Skill: {selectedTopic.skill} · Read the complete lesson before finishing</div>
+
+                <div style={{ marginTop: "1.8rem", lineHeight: 1.75 }}>
+                  <p><strong>Introduction</strong></p>
+                  <p>{selectedLesson.intro}</p>
+                  {(selectedLesson.sections || []).map((section) => (
+                    <section key={section.heading} style={{ marginTop: "1.5rem" }}>
+                      <h3 style={{ fontSize: "1.05rem", marginBottom: ".45rem" }}>{section.heading}</h3>
+                      <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{section.body}</p>
+                    </section>
+                  ))}
+
+                  {selectedLesson.example && (
+                    <section style={{ marginTop: "1.5rem" }}>
+                      <h3 style={{ fontSize: "1.05rem" }}>Example</h3>
+                      <pre style={{ overflowX: "auto", padding: "1rem", borderRadius: "10px", background: "#f4f6f8", fontSize: ".82rem", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{selectedLesson.example}</pre>
+                    </section>
+                  )}
+
+                  <section style={{ marginTop: "2rem", padding: "1rem", border: "1px solid #d8dde5", borderRadius: "12px", background: "#fafbfc" }}>
+                    <h3 style={{ fontSize: "1.05rem", marginTop: 0 }}>End-of-topic checkpoint</h3>
+                    <p style={{ marginBottom: 0 }}>Explain the concept in your own words and try the example yourself. The completion button unlocks after you scroll to the bottom of this document.</p>
+                  </section>
+
+                  <div style={{ height: "220px" }} />
+                </div>
+              </article>
+            </div>
+
+            <div style={{ padding: ".8rem 1rem", background: "#ffffff", borderTop: "1px solid #d8dde5", display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".75rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: ".4rem", fontSize: ".8rem", color: "#667085" }}>
+                <LockKeyhole size={15} />
+                {canComplete ? "Lesson read to the end" : "Scroll to the end to unlock completion"}
+              </div>
+              <button
+                type="button"
+                disabled={!canComplete || selectedTopic.completed}
+                onClick={completeTopic}
+                className="btn btn-primary"
+              >
+                {selectedTopic.completed ? "Topic completed ✓" : "Mark topic complete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
