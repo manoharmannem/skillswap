@@ -20,7 +20,6 @@ export default function Messages() {
   const scrollRef = useRef(null);
 
   async function loadConversations() { setConversations(await getConversations()); }
-
   useEffect(() => { loadConversations(); }, [user?.id]);
 
   const activeConversation = useMemo(
@@ -29,18 +28,22 @@ export default function Messages() {
   );
 
   const activePerson = activeEmail ? findUserByEmail(activeEmail) : null;
+  const activeUserId = activeConversation?.user?._id || activePerson?.id || activePerson?._id || null;
+  const activeName = activePerson?.fullName || activePerson?.name || activeConversation?.user?.name || activeEmail;
 
   useEffect(() => {
-    if (!activeConversation?.user?._id) { setMessages([]); return undefined; }
+    if (!activeUserId) { setMessages([]); return undefined; }
+
     let cancelled = false;
     const loadConversation = async () => {
-      const next = await getMessagesFor(activeConversation.user._id);
+      const next = await getMessagesFor(activeUserId);
       if (!cancelled) setMessages(next);
     };
+
     loadConversation();
     const interval = window.setInterval(loadConversation, 2500);
     return () => { cancelled = true; window.clearInterval(interval); };
-  }, [activeConversation?.user?._id]);
+  }, [activeUserId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -49,13 +52,13 @@ export default function Messages() {
   async function handleSend(event) {
     event.preventDefault();
     const text = draft.trim();
-    if (!text || !activeConversation) return;
+    if (!text || !activeUserId) return;
 
-    const result = await sendMessage(activeConversation.user._id, text);
+    const result = await sendMessage(activeUserId, text);
     if (result.error) { toast.error(result.error); return; }
 
     setDraft("");
-    const next = await getMessagesFor(activeConversation.user._id);
+    const next = await getMessagesFor(activeUserId);
     setMessages(next);
     await loadConversations();
     await refreshMessageNotifications();
@@ -80,10 +83,7 @@ export default function Messages() {
                 <button key={person._id} className={`conversation-item${person.email === activeEmail ? " active" : ""}`} onClick={() => navigate(`/dashboard/messages/${encodeURIComponent(person.email)}`)}>
                   <span className="avatar-fill ember-fill" style={{ width: "2.5rem", height: "2.5rem", fontSize: ".8rem" }}>{initialsOf(person.name)}</span>
                   <span className="conversation-item-body">
-                    <span className="conversation-item-top">
-                      <span className="conversation-item-name">{person.name}</span>
-                      {conversation.lastMessage && <span className="conversation-item-time">{formatTime(conversation.lastMessage.createdAt)}</span>}
-                    </span>
+                    <span className="conversation-item-top"><span className="conversation-item-name">{person.name}</span>{conversation.lastMessage && <span className="conversation-item-time">{formatTime(conversation.lastMessage.createdAt)}</span>}</span>
                     <span className="conversation-item-preview">{conversation.lastMessage?.message || "Say hello 👋"}</span>
                   </span>
                   {conversation.unreadCount > 0 && <span className="unread-dot" title="Unread messages">{conversation.unreadCount}</span>}
@@ -101,8 +101,8 @@ export default function Messages() {
           ) : (
             <>
               <div className="chat-header">
-                <div className="avatar-fill ember-fill" style={{ width: "2.5rem", height: "2.5rem" }}>{initialsOf(activePerson?.fullName || activeConversation?.user?.name)}</div>
-                <div><p style={{ fontWeight: 600 }}>{activePerson?.fullName || activeConversation?.user?.name}</p><p className="list-row-sub">SkillSwap member</p></div>
+                <div className="avatar-fill ember-fill" style={{ width: "2.5rem", height: "2.5rem" }}>{initialsOf(activeName)}</div>
+                <div><p style={{ fontWeight: 600 }}>{activeName}</p><p className="list-row-sub">SkillSwap member</p></div>
               </div>
 
               <div className="chat-messages" ref={scrollRef}>
