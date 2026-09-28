@@ -1,5 +1,6 @@
 import Profile from "../models/profile.js";
 import User from "../models/user.js";
+import { createPracticeModules } from "../utils/practiceModules.js";
 
 export const getProfiles = async (req, res) => {
   try { res.json({ profiles: await Profile.find().populate("user", "name email") }); }
@@ -25,7 +26,10 @@ export const getProfileById = async (req, res) => {
 export const updateMyProfile = async (req, res) => {
   try {
     const { name, bio = "", skills = [], learningSkills = [] } = req.body;
-    const user = await User.findByIdAndUpdate(req.user._id, { name: name?.trim() || req.user.name, bio, skills, learningSkills }, { new: true, runValidators: true });
+    const oldLearning = (req.user.learningSkills || []).map((s) => String(s).trim().toLowerCase()).sort().join("|");
+    const nextLearning = (Array.isArray(learningSkills) ? learningSkills : []).map((s) => String(s).trim().toLowerCase()).sort().join("|");
+    const update = { name: name?.trim() || req.user.name, bio, skills, learningSkills };
+    if (oldLearning !== nextLearning) update.practiceModules = createPracticeModules(learningSkills);\n    const user = await User.findByIdAndUpdate(req.user._id, update, { new: true, runValidators: true });
     const profile = await Profile.findOneAndUpdate({ user: user._id }, { name: user.name, email: user.email, bio, skills, learningSkills }, { new: true, upsert: true, runValidators: true });
     res.json({ message: "Profile updated successfully", profile, user: { id: user._id, name: user.name, fullName: user.name, email: user.email, skills: user.skills, learningSkills: user.learningSkills, bio: user.bio, credits: user.credits, practiceModules: user.practiceModules, quizScores: Object.fromEntries(user.quizScores || []) } });
   } catch (error) { res.status(500).json({ message: "Failed to update profile", error: error.message }); }
