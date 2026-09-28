@@ -7,6 +7,12 @@ const practiceModuleSchema = new mongoose.Schema(
     level: { type: String, required: true },
     description: { type: String, required: true },
     completed: { type: Boolean, default: false },
+    topics: [{
+      id: { type: String, required: true },
+      title: { type: String, required: true },
+      description: { type: String, default: "" },
+      completed: { type: Boolean, default: false },
+    }],
   },
   { _id: false }
 );
