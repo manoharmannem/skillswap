@@ -215,6 +215,28 @@ const TOPIC_SETS = {
   }
 };
 
+const COURSE_SOURCES = {
+  html:[{title:"MDN Web Docs — HTML learning",url:"https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content"}],
+  css:[{title:"MDN Web Docs — CSS",url:"https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Styling_basics"}],
+  javascript:[{title:"MDN Web Docs — JavaScript",url:"https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting"}],
+  react:[{title:"React — Passing Props",url:"https://react.dev/learn/passing-props-to-a-component"},{title:"React — State",url:"https://react.dev/learn/state-a-components-memory"},{title:"React — Managing State",url:"https://react.dev/learn/managing-state"}],
+  excel:[{title:"Microsoft Support — Excel",url:"https://support.microsoft.com/en-us/excel/"}],
+  figma:[{title:"Figma Learn — Design for beginners",url:"https://help.figma.com/hc/en-us/sections/30880632542743-Figma-Design-for-beginners"}],
+  "ui/ux":[{title:"Figma Learn",url:"https://help.figma.com/hc/en-us/"}],
+  "public speaking":[{title:"Toastmasters — Public Speaking Tips",url:"https://www.toastmasters.org/resources/public-speaking-tips"}],
+  "presentation skills":[{title:"Toastmasters — Preparing a Speech",url:"https://www.toastmasters.org/resources/public-speaking-tips/preparing-a-speech"}],
+  guitar:[{title:"Fender — Essential Beginner Chords",url:"https://www.fender.com/articles/chords/essential-beginner-chords-g-c-d"},{title:"Fender — Beginner Guitar Scales",url:"https://www.fender.com/articles/scales/5-essential-guitar-scales-for-beginners"}],
+  "guitar chords":[{title:"Fender — Essential Beginner Chords",url:"https://www.fender.com/articles/chords/essential-beginner-chords-g-c-d"}],
+  "beginner spanish":[{title:"Instituto Cervantes — Spanish A1",url:"https://nuevadelhi.cervantes.es/en/spanish_courses/students/spanish_general_courses/spanish_courses_level_a1.htm"}],
+  conversation:[{title:"Instituto Cervantes — Spanish A1",url:"https://nuevadelhi.cervantes.es/en/spanish_courses/students/spanish_general_courses/spanish_courses_level_a1.htm"}],
+  grammar:[{title:"Instituto Cervantes — Spanish A1",url:"https://nuevadelhi.cervantes.es/en/spanish_courses/students/spanish_general_courses/spanish_courses_level_a1.htm"}],
+  listening:[{title:"Instituto Cervantes — Spanish A1",url:"https://nuevadelhi.cervantes.es/en/spanish_courses/students/spanish_general_courses/spanish_courses_level_a1.htm"}],
+  "watercolour basics":[{title:"Royal Talens — Watercolour painting",url:"https://www.royaltalens.com/blogs/watercolour-paint/painting-flowers"}],
+  "colour & mixing":[{title:"Royal Talens — Colour mixing chart",url:"https://www.royaltalens.com/blogs/creativity/colour-mixing-chart"}],
+  techniques:[{title:"Royal Talens — Watercolour techniques",url:"https://www.royaltalens.com/blogs/watercolour-paint/painting-flowers"},{title:"Winsor & Newton — Wet-on-wet",url:"https://www.winsornewton.com/blogs/how-tos/tate-sargent-watercolour-set"}],
+  composition:[{title:"Royal Talens — Watercolour guides",url:"https://www.royaltalens.com/blogs/watercolour-paint"}]
+};
+
 const MODULES = [
   ["foundations", "Module 1 — Foundations", "Learn the essential ideas before moving to more complex work."],
   ["core", "Module 2 — Core Skills", "Build the main skills through guided examples and repetition."],
@@ -235,59 +257,60 @@ function genericTopics(category, moduleIndex) {
   return sets[moduleIndex];
 }
 
-export function lessonFor(skill, category, moduleTitle, topicTitle) {
+const DOMAIN_GUIDES = {
+  c:{core:"Focus on variables, control flow, functions, arrays, pointers, structures, and memory. Practise with small console programs.",example:"int scores[3] = {80, 90, 75};\nint total = scores[0] + scores[1] + scores[2];\nprintf(\"%d\\n\", total);",mistakes:"Watch for uninitialized variables, array bounds, incorrect format specifiers, missing braces, and memory leaks."},
+  "c++":{core:"Build from C-style fundamentals into classes, the standard library, templates, and modern resource-management patterns.",example:"std::vector<int> scores{80, 90, 75};\nint total = 0;\nfor (int score : scores) total += score;",mistakes:"Watch for lifetime errors, unnecessary raw ownership, accidental copies, and confusing inheritance with composition."},
+  java:{core:"Connect syntax to object-oriented design, collections, exceptions, and reusable methods. Use small classes and test one behavior at a time.",example:"List<Integer> scores = List.of(80, 90, 75);\nint total = scores.stream().mapToInt(Integer::intValue).sum();",mistakes:"Watch for null values, oversized classes, weak exception handling, and poor collection choices."},
+  python:{core:"Use readable Python syntax to practise variables, functions, collections, files, exceptions, modules, and automation.",example:"scores = [80, 90, 75]\naverage = sum(scores) / len(scores)\nprint(average)",mistakes:"Watch for mutable-default-argument traps, confusing strings with numbers, broad exception handling, and long functions."},
+  javascript:{core:"Learn values, functions, objects, arrays, DOM events, asynchronous work, and APIs. Separate data from UI behavior.",example:"const scores = [80, 90, 75];\nconst average = scores.reduce((sum, score) => sum + score, 0) / scores.length;",mistakes:"Watch for accidental type coercion, async assumptions, unexpected mutation, and mixed responsibilities."},
+  html:{core:"Use semantic HTML to describe document meaning and structure. Start with headings and landmarks, then links, media, forms, and accessible labels.",example:"<main>\\n  <h1>SkillSwap</h1>\\n  <p>Learn by practising.</p>\\n  <a href=\"/practice\">Start</a>\\n</main>",mistakes:"Avoid choosing elements only for appearance, missing form labels, vague links, and unnecessary div nesting."},
+  css:{core:"Think of CSS as a system: selectors choose elements, the box model controls space, layout systems arrange content, and media queries adapt the design.",example:".card { display:grid; gap:1rem; padding:1rem; }\\n@media (max-width:700px){.card{grid-template-columns:1fr;}}",mistakes:"Avoid excessive !important, fixed widths that break on small screens, and duplicated styles."},
+  react:{core:"React describes UI from data. Props pass information into components, state stores changing information, and shared state needs a clear owner.",example:"function Counter(){\\n const [count,setCount]=useState(0);\\n return <button onClick={()=>setCount(count+1)}>{count}</button>;\\n}",mistakes:"Avoid duplicated derived state, direct mutation, unnecessary global state, and effects used for ordinary rendering logic."},
+  sql:{core:"Use SQL to ask structured questions of relational data. Start with SELECT and filtering, then aggregate, join, and validate results.",example:"SELECT department, AVG(score) AS average_score\\nFROM results\\nGROUP BY department\\nORDER BY average_score DESC;",mistakes:"Check join conditions, understand WHERE versus HAVING, and investigate unexpected duplicate rows."},
+  excel:{core:"Build worksheets around clean tables, clear formulas, consistent references, and visible outputs. Practise formulas, lookups, tables, PivotTables, and charts.",example:"=IF(C2>=50,\"Pass\",\"Review\")\\n=XLOOKUP(E2,A:A,B:B,\"Not found\")",mistakes:"Watch for broken references, inconsistent types, hidden spaces, hard-coded values, and messy chart ranges."},
+  "ui/ux":{core:"Begin with the user problem rather than decoration. Map the task, identify content, sketch the flow, then refine hierarchy, interaction, accessibility, and consistency.",example:"Task: book a meeting → choose skill → choose tutor → choose time → confirm → show success.",mistakes:"Avoid designing without a user goal, hiding important actions, over-decoration, and ignoring empty/loading/error states."},
+  figma:{core:"Learn Figma by building real screens. Frames establish layout, auto layout responds to content, components create reusable UI, and prototypes connect interactions.",example:"Create a mobile card → add title → apply auto layout → make a component → create variants → prototype the tap state.",mistakes:"Avoid manually spacing repeated elements, inconsistent styles, and prototype links that do not match the user flow."},
+  "visual design":{core:"Use hierarchy, alignment, contrast, repetition, proximity, typography, color, and whitespace to make information easy to scan.",example:"Create one poster with one dominant headline, one supporting message, one focal image, and one clear action.",mistakes:"Avoid too many fonts, weak contrast, inconsistent spacing, random alignment, and making everything loud."},
+  "public speaking":{core:"Build a clear opening, main points, and summary for a specific audience. Rehearse aloud and use pacing, pauses, eye contact, and purposeful gestures.",example:"Opening → problem → three useful ideas → example → takeaway → call to action.",mistakes:"Avoid reading slides word-for-word, rushing, filling silence, and presenting without timing a rehearsal."},
+  "presentation skills":{core:"Design the story before the slides. Keep one main message per visual, rehearse transitions, and prepare for questions.",example:"Slide 1 outcome → Slide 2 problem → Slide 3 evidence → Slide 4 solution → Slide 5 next step.",mistakes:"Avoid dense paragraphs, decorative slides, inconsistent terms, and weak context."},
+  storytelling:{core:"Give the audience a reason to care, enough context, meaningful change or tension, and a clear ending.",example:"Before → challenge → decision → consequence → lesson. Replace generic statements with one concrete detail.",mistakes:"Avoid too much background, unrelated details, weak stakes, and endings that introduce a new idea."},
+  guitar:{core:"Begin with posture and tuning, then open chords, clean changes, steady rhythm, and short musical pieces. Slow metronome practice builds reliable movement.",example:"Practise G → C → D: hold each chord, strum four slow beats, switch, then repeat.",mistakes:"Avoid pressing too hard, collapsing fingers, inconsistent rhythm, skipping tuning, and rushing tempo."},
+  "guitar chords":{core:"Chord learning is shape, clean notes, transition speed, and rhythm. Start with accessible open chords such as G, C, and D.",example:"G → C → D. Form each chord, check strings, strum slowly, then practise the transition without stopping the beat.",mistakes:"Avoid memorizing shapes without checking sound, muting neighboring strings, squeezing too hard, and practising only at full speed."},
+  "beginner spanish":{core:"Start with useful phrases, introductions, numbers, time, everyday verbs, and short sentences. Instituto Cervantes describes A1 around frequent expressions, simple phrases, introductions, and basic interaction.",example:"Hola. Me llamo Ana. Soy de India. Vivo en Hyderabad. ¿Cómo estás? — Estoy bien, gracias.",mistakes:"Avoid translating every sentence word-for-word, ignoring pronunciation, and memorizing isolated words without sentences."},
+  conversation:{core:"Conversation practice is interactive: listen for meaning, answer, add one detail, and ask a related question. Use repair phrases when needed.",example:"¿De dónde eres? → Soy de India. Vivo en Hyderabad. ¿Y tú?",mistakes:"Avoid one-word answers, prepared monologues, ignoring the other speaker, and stopping when one word is unknown."},
+  grammar:{core:"Grammar is a pattern system. Learn one pattern, see it in several sentences, change subject or time, then produce your own examples.",example:"Yo vivo en Hyderabad. Tú vives en Delhi. Ellos viven en Madrid.",mistakes:"Avoid memorizing tables without examples and practising only recognition instead of producing sentences."},
+  listening:{core:"Build listening through repeated exposure at a manageable level: topic first, keywords second, details third. Replay short audio and shadow phrases.",example:"Listen once for the idea, again for names/places/numbers, then repeat one short sentence aloud.",mistakes:"Avoid trying to understand every word and using material far above your level."},
+  "watercolour basics":{core:"Watercolour depends on water, pigment, paper, and drying time. Beginner guides emphasize transparent layers and preserving paper highlights.",example:"Paint a light wash, let it dry, then add a darker layer only where the form turns away from light.",mistakes:"Avoid too much pigment early, disturbing wet paper, covering every white area, and adding dark details too soon."},
+  "colour & mixing":{core:"Record mixtures instead of guessing. Build a colour chart, vary water and pigment, compare warm/cool versions, and use limited palettes.",example:"Create a grid of colour pairs, mix controlled proportions, and record the result.",mistakes:"Avoid dirty water, too many pigments, judging only wet colour, and skipping value comparison."},
+  techniques:{core:"Practise wet-on-wet, wet-on-dry, washes, glazing, lifting, dry brush, and edge control one at a time.",example:"Wet one square, add a transparent wash, and compare its edge with the same mark on dry paper.",mistakes:"Avoid changing paper, brush, pigment, and water simultaneously when diagnosing a technique."},
+  composition:{core:"Composition arranges shapes, values, space, and focal points so the viewer knows where to look. Thumbnail sketches test structure before detail.",example:"Make three tiny landscape thumbnails and move the darkest value and focal point in each.",mistakes:"Avoid equal detail everywhere, ignoring negative space, accidental focal points, and starting with tiny details."}
+};
+function guideFor(category, skill) {
   const key = normalize(category);
-  const overview = COURSE_OVERVIEWS[key] || COURSE_OVERVIEWS[normalize(skill)] || `This lesson teaches a practical part of ${category || skill}.`;
-  const isArray = /array|list|collection|vector/i.test(topicTitle);
-  const subject = category || skill;
-
-  const sections = [
-    {
-      heading: "1. Start with the idea",
-      body: `${topicTitle} is a concept you should understand before trying to memorize syntax or steps. In ${subject}, the goal is to know what the concept does, why it exists, and when it is useful. ${overview}`
-    },
-    {
-      heading: "2. Why does this matter?",
-      body: `You will use ${topicTitle.toLowerCase()} whenever a task requires you to organize information, make a decision, create something, communicate clearly, or solve a problem. Learning the reason behind the technique makes it much easier to remember and adapt.`
-    },
-    {
-      heading: "3. Learn it step by step",
-      body: `First identify the input or starting situation. Next choose the concept that matches the problem. Then perform one small step at a time and check the result after each step. Finally, explain what happened in your own words. Do not move on just because the example looks familiar.`
-    },
-    {
-      heading: "4. Example",
-      body: isArray
-        ? `Arrays or array-like collections store multiple related values so you can work with them as a group. Start with a small collection, access one value, change a value, add or remove a value when the language supports it, and then loop through the collection. The exact syntax depends on ${subject}.`
-        : `Create a very small example of ${topicTitle.toLowerCase()}. Keep the example focused on one idea. Change one value or step and observe how the result changes. Then recreate the example without looking at the original.`
-    },
-    {
-      heading: "5. Common beginner mistakes",
-      body: `Common mistakes include trying to memorize without understanding, skipping the smallest example, changing several things at once, ignoring error messages or feedback, and moving to the next topic before you can explain the current one. When something fails, reduce the example until you can identify exactly which step caused the problem.`
-    },
-    {
-      heading: "6. Guided practice",
-      body: `Practice ${topicTitle.toLowerCase()} in three rounds. Round 1: copy a tiny example and explain every line or step. Round 2: rebuild it from memory with one change. Round 3: solve a new but related problem without looking at the lesson. Write down what you found difficult.`
-    },
-    {
-      heading: "7. Check your understanding",
-      body: `Before completing this lesson, answer these questions in your own words: What is ${topicTitle.toLowerCase()}? Why would you use it? What are the important steps? What mistake should you avoid? Can you create a small example without copying?`
-    },
-    {
-      heading: "8. Mini challenge",
-      body: `Create one small result using ${topicTitle.toLowerCase()}. Keep the task realistic and finishable in about 15–30 minutes. If you get stuck, return to the earlier sections, reduce the problem, and solve the smallest version first.`
-    },
-    {
-      heading: "9. Lesson recap",
-      body: `You have learned the purpose of ${topicTitle.toLowerCase()}, how to approach it step by step, how to practise it, and how to check your own understanding. The next lesson should build on this one rather than replace it.`
-    }
-  ];
-
+  return DOMAIN_GUIDES[key] || {
+    core:"Break " + (category || skill) + " into a small goal, practise the essential technique, review the result, and repeat with one controlled change.",
+    example:"Choose one small " + (category || skill) + " activity, complete it once with guidance, then repeat it without looking.",
+    mistakes:"Avoid skipping fundamentals, changing too many things at once, and moving ahead before you can explain and reproduce the basic technique."
+  };
+}
+export function lessonFor(skill, category, moduleTitle, topicTitle) {
+  const key=normalize(category), guide=guideFor(category,skill);
+  const overview=COURSE_OVERVIEWS[key] || COURSE_OVERVIEWS[normalize(skill)] || ("This lesson teaches a practical part of " + (category || skill) + ".");
   return {
-    intro: `Welcome to ${topicTitle}. This is a complete lesson in ${moduleTitle} for ${category || skill}. Read from top to bottom, work through the example, complete the mini challenge, and only then mark the lesson complete.`,
-    sections,
-    example: isArray
-      ? `// Practice example\nconst values = [10, 20, 30, 40];\nconsole.log(values[0]);\n\n// Change the values and practise accessing, updating,\n// adding, removing, or looping depending on your language.`
-      : `// SkillSwap practice\n// Topic: ${topicTitle}\n// Write a small example here and explain each step in your own words.`
+    intro:"Welcome to " + topicTitle + ". This complete lesson belongs to " + moduleTitle + " in " + (category || skill) + ". Read from beginning to end, practise the example, complete the mini challenge, and then mark the lesson complete.",
+    sections:[
+      {heading:"1. Start with the idea",body:topicTitle+" is a skill to understand and use, not just memorize. "+guide.core+" "+overview},
+      {heading:"2. Why does this matter?",body:"This topic appears in real "+(category || skill)+" work because it helps you complete a task more reliably. Connect the idea to a practical result you can create, explain, or perform yourself."},
+      {heading:"3. Learn it step by step",body:"Step 1 — identify the goal. Step 2 — choose the smallest example. Step 3 — perform one action at a time. Step 4 — inspect the result. Step 5 — change one variable and repeat. Step 6 — recreate the result without copying."},
+      {heading:"4. Practical example",body:guide.example},
+      {heading:"5. Common beginner mistakes",body:guide.mistakes},
+      {heading:"6. Guided practice",body:"Round 1: follow the example and explain each step aloud. Round 2: rebuild it with one small change. Round 3: solve a related problem without looking. Record the difficult part and repeat it slowly."},
+      {heading:"7. Check your understanding",body:"What is "+topicTitle.toLowerCase()+"? When would you use it? What are the key steps? What can go wrong? Can you reproduce the example without copying?"},
+      {heading:"8. Mini challenge",body:"Spend about 15–30 minutes making one small result with "+topicTitle.toLowerCase()+". Keep the scope small enough to finish and make the result demonstrate the concept."},
+      {heading:"9. Lesson recap",body:"You learned the purpose of "+topicTitle.toLowerCase()+", a practical approach, an example, common mistakes, and a repeatable practice routine. Explain the idea and reproduce a small example before moving on."}
+    ],
+    example:guide.example,
+    sources:COURSE_SOURCES[key] || []
   };
 }
 
