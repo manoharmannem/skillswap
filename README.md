@@ -130,3 +130,6 @@ backend/
 ## Deployment trigger
 
 The `main` branch is the source of truth for the Vercel deployment. This marker commit is intentionally harmless and exists only to trigger the connected Git deployment after the latest application changes.
+
+
+Deployment verification trigger: 2026-09-28 Practice hierarchy fixes.
