@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
-import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Download, FileText, X } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Download } from "lucide-react";
 import { jsPDF } from "jspdf";
 
 const filters = ["All", "Not started", "Completed"];
@@ -9,13 +9,6 @@ const filters = ["All", "Not started", "Completed"];
 const allCompleted = (items = []) => items.length > 0 && items.every((item) => item.completed);
 const countCompleted = (items = []) => items.filter((item) => item.completed).length;
 
-function lessonText(lesson) {
-  return [
-    lesson?.intro || "",
-    ...(lesson?.sections || []).flatMap((section) => [section.heading || "", section.body || ""]),
-    lesson?.example || ""
-  ].filter(Boolean).join("\n\n");
-}
 
 export default function Practice() {
   const { user, updatePracticeModules } = useAuth();
@@ -32,9 +25,6 @@ export default function Practice() {
   const selectedModule = selectedCategory?.modules?.find((item) => item.id === moduleId) || null;
   const selectedLesson = selectedModule?.lessons?.find((item) => item.id === lessonId) || null;
 
-  useEffect(() => {
-    if (!skillId && skills.length) setSkillId(skills[0].id);
-  }, [skillId, skills]);
 
   useEffect(() => {
     if (skillId && !selectedSkill) {
@@ -80,7 +70,7 @@ export default function Practice() {
               const nextModule = { ...module, lessons, completed: allCompleted(lessons) };
 
               return nextModule;
-            }).map((module) => module),
+            }),
           };
         }).map((category) => {
           const completedModules = allCompleted(category.modules);
@@ -300,16 +290,6 @@ export default function Practice() {
         </section>
       )}
 
-      {selectedLesson && (
-        <button
-          type="button"
-          aria-label="Close lesson"
-          onClick={() => { setSkillId(null); setCategoryId(null); setModuleId(null); setLessonId(null); }}
-          style={{ display: "none" }}
-        >
-          <X />
-        </button>
-      )}
     </div>
   );
 }
