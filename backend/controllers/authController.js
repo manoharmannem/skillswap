@@ -86,4 +86,10 @@ export const login = async (req, res) => {
   }
 };
 
-export const me = async (req, res) => {\n  if (!practiceMatchesLearningSkills(req.user.practiceModules, req.user.learningSkills)) {\n    req.user.practiceModules = createPracticeModules(req.user.learningSkills);\n    await req.user.save();\n  }\n  res.json({ user: safeUser(req.user) });\n};
+export const me = async (req, res) => {
+  if (!practiceMatchesLearningSkills(req.user.practiceModules, req.user.learningSkills)) {
+    req.user.practiceModules = createPracticeModules(req.user.learningSkills);
+    await req.user.save();
+  }
+  res.json({ user: safeUser(req.user) });
+};
