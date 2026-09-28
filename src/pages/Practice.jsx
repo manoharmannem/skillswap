@@ -275,6 +275,22 @@ export default function Practice() {
                 <h3>Example / practice</h3>
                 <pre style={{ overflowX: "auto", padding: "1rem", borderRadius: "12px", background: "var(--surface-muted, #f5f7fa)", whiteSpace: "pre-wrap" }}>{selectedLesson.lesson?.example}</pre>
               </div>
+
+              {(selectedLesson.lesson?.sources || []).length > 0 && (
+                <div style={{ marginTop: "1.75rem", padding: "1rem", borderRadius: "12px", background: "var(--surface-muted, #f5f7fa)" }}>
+                  <h3 style={{ marginTop: 0 }}>Further learning</h3>
+                  <p className="page-sub" style={{ marginTop: ".25rem" }}>
+                    This lesson is original SkillSwap content informed by the learning references below. Use them for deeper study.
+                  </p>
+                  <ul style={{ margin: ".75rem 0 0", paddingLeft: "1.2rem" }}>
+                    {selectedLesson.lesson.sources.map((source) => (
+                      <li key={source.url} style={{ marginBottom: ".45rem" }}>
+                        <a href={source.url} target="_blank" rel="noreferrer">{source.title}</a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: "2rem", padding: "1rem", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", gap: ".75rem", flexWrap: "wrap", alignItems: "center" }}>
