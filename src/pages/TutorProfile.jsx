@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Award } from "lucide-react";
+import { ArrowLeft, Award, MessageCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useConnections } from "../context/ConnectionsContext.jsx";
 import ConnectionAction from "../components/ConnectionAction.jsx";
@@ -55,7 +55,8 @@ export default function TutorProfile() {
               <Award size={14} /> {tutor.credits ?? 0} credits earned teaching
             </p>
           </div>
-          {!isSelf && <ConnectionAction email={tutor.email} />}
+          {!isSelf && status === "accepted" && <button className="btn btn-primary btn-sm" onClick={() => navigate(`/dashboard/messages/${encodeURIComponent(tutor.email)}`)}><MessageCircle size={16} /> Message teacher</button>}
+          {!isSelf && status !== "accepted" && <ConnectionAction email={tutor.email} />}
           {isSelf && <span className="badge badge-completed">This is you</span>}
         </div>
 
