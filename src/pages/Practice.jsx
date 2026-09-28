@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
-import { CheckCircle2, ChevronDown, Circle, FileText, LockKeyhole, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, Circle, FileText, LockKeyhole, X, Download } from "lucide-react";
+import { jsPDF } from "jspdf";
 
 const filters = ["All", "Not started", "Completed"];
 
@@ -48,6 +49,53 @@ export default function Practice() {
       ...topic,
     });
     setCanComplete(Boolean(topic.completed));
+  }
+
+  function downloadLessonPdf() {
+    if (!selectedTopic) return;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const margin = 44;
+    const width = 595 - margin * 2;
+    let y = 56;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text(selectedTopic.title, margin, y, { maxWidth: width });
+    y += 28;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text("SkillSwap Learning Document • Original lesson content", margin, y);
+    y += 24;
+
+    const writeBlock = (text, size = 11, gap = 14) => {
+      doc.setFontSize(size);
+      const lines = doc.splitTextToSize(String(text || ""), width);
+      if (y + lines.length * (size + 3) > 770) {
+        doc.addPage();
+        y = 50;
+      }
+      doc.text(lines, margin, y);
+      y += lines.length * (size + 3) + gap;
+    };
+
+    writeBlock("Introduction", 13, 8);
+    writeBlock(selectedLesson.intro, 11, 14);
+
+    (selectedLesson.sections || []).forEach((section) => {
+      writeBlock(section.heading, 13, 8);
+      writeBlock(section.body, 11, 14);
+    });
+
+    if (selectedLesson.example) {
+      writeBlock("Example", 13, 8);
+      writeBlock(selectedLesson.example, 9, 16);
+    }
+
+    writeBlock("Completion checkpoint", 13, 8);
+    writeBlock("Read the lesson, try the example yourself, and complete the topic in SkillSwap after reaching the end of the lesson.", 11, 10);
+
+    const safeName = selectedTopic.title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+    doc.save(`skillswap-${safeName || "lesson"}.pdf`);
   }
 
   async function completeTopic() {
