@@ -1,581 +1,314 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
-import { ChevronDown, FileText, X, Download } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Download, FileText, X } from "lucide-react";
 import { jsPDF } from "jspdf";
 
 const filters = ["All", "Not started", "Completed"];
+
+const allCompleted = (items = []) => items.length > 0 && items.every((item) => item.completed);
+const countCompleted = (items = []) => items.filter((item) => item.completed).length;
+
+function lessonText(lesson) {
+  return [
+    lesson?.intro || "",
+    ...(lesson?.sections || []).flatMap((section) => [section.heading || "", section.body || ""]),
+    lesson?.example || ""
+  ].filter(Boolean).join("\n\n");
+}
 
 export default function Practice() {
   const { user, updatePracticeModules } = useAuth();
   const toast = useToast();
   const [filter, setFilter] = useState("All");
-  const [openSkill, setOpenSkill] = useState(null);
-  const [selectedModule, setSelectedModule] = useState(null);
-  const [canComplete, setCanComplete] = useState(false);
-  const lessonRef = useRef(null);
+  const [skillId, setSkillId] = useState(null);
+  const [categoryId, setCategoryId] = useState(null);
+  const [moduleId, setModuleId] = useState(null);
+  const [lessonId, setLessonId] = useState(null);
 
-  const modules = user?.practiceModules || [];
-
-  const visible = modules.filter((module) => {
-    const completed = Array.isArray(module.topics) && module.topics.length
-      ? module.topics.every((topic) => topic.completed)
-      : Boolean(module.completed);
-
-    if (filter === "Completed") return completed;
-    if (filter === "Not started") return !completed;
-    return true;
-  });
+  const skills = user?.practiceModules || [];
+  const selectedSkill = skills.find((item) => item.id === skillId) || null;
+  const selectedCategory = selectedSkill?.categories?.find((item) => item.id === categoryId) || null;
+  const selectedModule = selectedCategory?.modules?.find((item) => item.id === moduleId) || null;
+  const selectedLesson = selectedModule?.lessons?.find((item) => item.id === lessonId) || null;
 
   useEffect(() => {
-    if (!selectedModule) return undefined;
+    if (!skillId && skills.length) setSkillId(skills[0].id);
+  }, [skillId, skills]);
 
-    setCanComplete(Boolean(selectedModule.completed));
+  useEffect(() => {
+    if (skillId && !selectedSkill) {
+      setSkillId(skills[0]?.id || null);
+      setCategoryId(null);
+      setModuleId(null);
+      setLessonId(null);
+    }
+  }, [skillId, selectedSkill, skills]);
 
-    const node = lessonRef.current;
-    if (!node) return undefined;
-
-    const onScroll = () => {
-      const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 24;
-      if (atBottom) {
-        setCanComplete(true);
-      }
-    };
-
-    node.addEventListener("scroll", onScroll);
-    onScroll();
-
-    return () => node.removeEventListener("scroll", onScroll);
-  }, [selectedModule]);
-
-  function openModule(module) {
-    setSelectedModule(module);
-    setCanComplete(Boolean(module.completed));
-    setOpenSkill(module.id);
+  function resetFrom(level) {
+    if (level === "skill") {
+      setCategoryId(null);
+      setModuleId(null);
+      setLessonId(null);
+    }
+    if (level === "category") {
+      setModuleId(null);
+      setLessonId(null);
+    }
+    if (level === "module") setLessonId(null);
   }
 
-  async function completeModule() {
-    if (!selectedModule || !canComplete || selectedModule.completed) return;
+  async function updateLessonCompletion(lesson, completed) {
+    if (!selectedSkill || !selectedCategory || !selectedModule) return;
 
-    const updated = modules.map((module) => {
-      if (module.id !== selectedModule.id) return module;
-
-      const topics = (module.topics || []).map((topic) => ({
-        ...topic,
-        completed: true,
-      }));
+    const nextModules = skills.map((skill) => {
+      if (skill.id !== selectedSkill.id) return skill;
 
       return {
-        ...module,
-        topics,
-        completed: true,
+        ...skill,
+        categories: skill.categories.map((category) => {
+          if (category.id !== selectedCategory.id) return category;
+
+          return {
+            ...category,
+            modules: category.modules.map((module) => {
+              if (module.id !== selectedModule.id) return module;
+
+              const lessons = module.lessons.map((item) =>
+                item.id === lesson.id ? { ...item, completed } : item
+              );
+              const nextModule = { ...module, lessons, completed: allCompleted(lessons) };
+
+              return nextModule;
+            }).map((module) => module),
+          };
+        }).map((category) => {
+          const completedModules = allCompleted(category.modules);
+          return { ...category, completed: completedModules };
+        }),
       };
-    });
+    }).map((skill) => ({
+      ...skill,
+      completed: allCompleted(skill.categories),
+    }));
 
-    const result = await updatePracticeModules(updated);
-
+    const result = await updatePracticeModules(nextModules);
     if (result.error) {
       toast.error(result.error);
       return;
     }
-
-    const finished = updated.find((module) => module.id === selectedModule.id);
-    setSelectedModule(finished);
-    toast.success(
-      `Module completed! You finished every topic in ${finished?.skill || "this skill"}.`
-    );
+    toast.success(completed ? "Lesson completed." : "Lesson reopened.");
   }
 
-  function downloadModulePdf() {
-    if (!selectedModule) return;
-
+  function downloadLessonPdf() {
+    if (!selectedLesson) return;
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const margin = 44;
     const width = 595 - margin * 2;
-    let y = 56;
+    let y = 55;
 
-    const writeBlock = (text, size = 11, gap = 14) => {
+    const write = (text, size = 11, gap = 12) => {
       doc.setFontSize(size);
       const lines = doc.splitTextToSize(String(text || ""), width);
-
-      if (y + lines.length * (size + 3) > 770) {
+      if (y + lines.length * (size + 4) > 770) {
         doc.addPage();
         y = 50;
       }
-
       doc.text(lines, margin, y);
-      y += lines.length * (size + 3) + gap;
+      y += lines.length * (size + 4) + gap;
     };
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.text(selectedModule.skill, margin, y, { maxWidth: width });
-    y += 28;
-
+    write(selectedLesson.title, 20, 10);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text(
-      "SkillSwap Learning Module • Original lesson content",
-      margin,
-      y
-    );
-    y += 28;
-
-    (selectedModule.topics || []).forEach((topic, index) => {
-      writeBlock(`${index + 1}. ${topic.title}`, 15, 8);
-      writeBlock(topic.lesson?.intro || topic.description, 11, 10);
-
-      (topic.lesson?.sections || []).forEach((section) => {
-        writeBlock(section.heading, 12, 6);
-        writeBlock(section.body, 10.5, 12);
-      });
-
-      if (topic.lesson?.example) {
-        writeBlock("Example", 12, 6);
-        writeBlock(topic.lesson.example, 9, 14);
-      }
+    write(`${selectedSkill?.skill} → ${selectedCategory?.name} → ${selectedModule?.title}`, 10, 16);
+    write(selectedLesson.lesson?.intro, 11, 12);
+    (selectedLesson.lesson?.sections || []).forEach((section) => {
+      doc.setFont("helvetica", "bold");
+      write(section.heading, 13, 5);
+      doc.setFont("helvetica", "normal");
+      write(section.body, 10.5, 12);
     });
+    doc.setFont("helvetica", "bold");
+    write("Example / practice", 13, 5);
+    doc.setFont("helvetica", "normal");
+    write(selectedLesson.lesson?.example, 9.5, 12);
+    doc.save(`skillswap-${selectedLesson.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`);
+  }
 
-    writeBlock("Module completion", 14, 8);
-    writeBlock(
-      "Read the complete module, work through the examples, and finish the module in SkillSwap after reaching the end.",
-      11,
-      10
+  const visibleSkills = useMemo(() => skills.filter((skill) => {
+    const completed = allCompleted(skill.categories || []);
+    if (filter === "Completed") return completed;
+    if (filter === "Not started") return !completed;
+    return true;
+  }), [skills, filter]);
+
+  if (!skills.length) {
+    return (
+      <div>
+        <p className="page-eyebrow">Learn step by step</p>
+        <h1 className="page-title">Practice</h1>
+        <p className="page-sub">Choose skills you want to learn in your profile to create a structured learning path.</p>
+        <div className="panel" style={{ marginTop: "1.5rem" }}>No learning skills selected yet.</div>
+      </div>
     );
-
-    const safeName = selectedModule.skill
-      .replace(/[^a-z0-9]+/gi, "-")
-      .replace(/^-|-$/g, "")
-      .toLowerCase();
-
-    doc.save(`skillswap-${safeName || "module"}-module.pdf`);
   }
 
   return (
     <div>
-      <p className="page-eyebrow">Learn step by step</p>
+      <p className="page-eyebrow">Structured learning paths</p>
       <h1 className="page-title">Practice</h1>
       <p className="page-sub">
-        Only the skills you selected under “Skills you want to learn” appear
-        here. Open a skill to read its complete learning module.
+        Choose a skill, then a language or category, then a module, then a complete lesson. Your progress is saved to your SkillSwap account.
       </p>
 
       <div className="quick-actions" style={{ marginTop: "1.5rem" }}>
-        {filters.map((filterName) => (
-          <button
-            key={filterName}
-            className="chip"
-            data-active={filter === filterName ? "true" : "false"}
-            onClick={() => setFilter(filterName)}
-          >
-            {filterName}
+        {filters.map((name) => (
+          <button key={name} className="chip" data-active={filter === name ? "true" : "false"} onClick={() => setFilter(name)}>
+            {name}
           </button>
         ))}
       </div>
 
-      <div className="card-grid" style={{ marginTop: "1.5rem" }}>
-        {visible.length === 0 ? (
-          <p className="empty-note">
-            {modules.length
-              ? "No skills match this filter."
-              : "Select a skill you want to learn in your profile to start practising."}
-          </p>
-        ) : (
-          visible.map((module) => {
-            const topics = module.topics || [];
-            const completedCount = topics.filter(
-              (topic) => topic.completed
-            ).length;
-            const skillCompleted =
-              topics.length > 0
-                ? completedCount === topics.length
-                : Boolean(module.completed);
-            const isOpen = openSkill === module.id;
-
-            return (
-              <div
-                key={module.id}
-                className="panel"
-                style={{ padding: "1.25rem" }}
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenSkill(isOpen ? null : module.id)
-                  }
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "1rem",
-                    textAlign: "left",
-                    background: "none",
-                    border: 0,
-                    padding: 0,
-                    color: "inherit",
-                    cursor: "pointer",
-                  }}
-                >
-                  <span style={{ minWidth: 0 }}>
-                    <span
-                      style={{
-                        display: "block",
-                        fontWeight: 600,
-                        fontSize: "1.05rem",
-                      }}
-                    >
-                      {module.skill}
-                    </span>
-
-                    <span
-                      className="chip-static"
-                      style={{
-                        marginTop: ".45rem",
-                        display: "inline-block",
-                      }}
-                    >
-                      {module.level}
-                    </span>
-
-                    <span
-                      style={{
-                        display: "block",
-                        marginTop: ".7rem",
-                        fontSize: ".84rem",
-                        color: "var(--muted-foreground)",
-                      }}
-                    >
-                      {module.description}
-                    </span>
-                  </span>
-
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: ".45rem",
-                    }}
-                  >
-                    <span
-                      className={
-                        skillCompleted
-                          ? "badge badge-completed"
-                          : "badge badge-upcoming"
-                      }
-                    >
-                      {topics.length
-                        ? `${completedCount}/${topics.length}`
-                        : "0%"}
-                    </span>
-
-                    <ChevronDown
-                      size={18}
-                      style={{
-                        transform: isOpen
-                          ? "rotate(180deg)"
-                          : "none",
-                        transition: "transform .2s",
-                      }}
-                    />
-                  </span>
-                </button>
-
-                {isOpen && (
-                  <div
-                    style={{
-                      marginTop: "1.15rem",
-                      borderTop: "1px solid var(--border)",
-                      paddingTop: ".9rem",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => openModule(module)}
-                      style={{ width: "100%" }}
-                    >
-                      <FileText size={16} /> Open learning module
-                    </button>
-
-                    <div
-                      style={{
-                        marginTop: ".8rem",
-                        fontSize: ".8rem",
-                        color: "var(--muted-foreground)",
-                      }}
-                    >
-                      {completedCount}/{topics.length} topics completed. Read
-                      every topic in one continuous learning document.
-                    </div>
-
-                    {skillCompleted && (
-                      <div
-                        style={{
-                          marginTop: "1rem",
-                          padding: "1rem",
-                          borderRadius: "12px",
-                          border: "1px solid var(--border)",
-                          background: "var(--surface-muted, #f6f8fb)",
-                        }}
-                      >
-                        <strong>🎉 Module completed!</strong>
-                        <div
-                          style={{
-                            marginTop: ".25rem",
-                            fontSize: ".85rem",
-                            color: "var(--muted-foreground)",
-                          }}
-                        >
-                          You finished every topic in the {module.skill} learning
-                          path.
-                        </div>
-                      </div>
-                    )}
+      {!selectedSkill ? (
+        <div className="card-grid" style={{ marginTop: "1.5rem" }}>
+          {visibleSkills.map((skill) => (
+            <button key={skill.id} className="panel" style={{ textAlign: "left", cursor: "pointer", border: "1px solid var(--border)" }} onClick={() => { setSkillId(skill.id); resetFrom("skill"); }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
+                <div>
+                  <strong style={{ fontSize: "1.08rem" }}>{skill.skill}</strong>
+                  <p className="page-sub" style={{ margin: ".45rem 0 0" }}>{skill.description}</p>
+                </div>
+                <ChevronRight />
+              </div>
+              <div style={{ marginTop: ".9rem", fontSize: ".82rem", color: "var(--muted-foreground)" }}>
+                {countCompleted(skill.categories || [])}/{skill.categories?.length || 0} categories completed
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : !selectedCategory ? (
+        <section style={{ marginTop: "1.5rem" }}>
+          <button className="btn btn-secondary" onClick={() => { setSkillId(null); resetFrom("skill"); }}><ArrowLeft size={16} /> All skills</button>
+          <div className="panel" style={{ marginTop: "1rem" }}>
+            <p className="page-eyebrow">{selectedSkill.skill}</p>
+            <h2 style={{ margin: 0 }}>Choose what you want to learn</h2>
+            <p className="page-sub">For coding, this is where C, C++, Java, Python and JavaScript appear. Other skills have their own relevant learning categories.</p>
+          </div>
+          <div className="card-grid" style={{ marginTop: "1rem" }}>
+            {selectedSkill.categories.map((category) => (
+              <button key={category.id} className="panel" style={{ textAlign: "left", cursor: "pointer", border: "1px solid var(--border)" }} onClick={() => { setCategoryId(category.id); resetFrom("category"); }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
+                  <div>
+                    <strong style={{ fontSize: "1.05rem" }}>{category.name}</strong>
+                    <p className="page-sub" style={{ margin: ".4rem 0 0" }}>{category.description}</p>
                   </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {selectedModule && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={selectedModule.skill + " learning module"}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1000,
-            background: "rgba(10,18,30,.68)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "1rem",
-          }}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setSelectedModule(null);
-            }
-          }}
-        >
-          <div
-            style={{
-              width: "min(900px, 100%)",
-              height: "min(90vh, 850px)",
-              background: "#eef1f5",
-              borderRadius: "16px",
-              boxShadow: "0 24px 80px rgba(0,0,0,.25)",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <div
-              style={{
-                padding: ".8rem 1rem",
-                background: "#fff",
-                borderBottom: "1px solid #d8dde5",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
+                  <ChevronRight />
+                </div>
+                <div style={{ marginTop: ".8rem", fontSize: ".82rem", color: "var(--muted-foreground)" }}>5 modules · {countCompleted(category.modules || [])}/5 completed</div>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : !selectedModule ? (
+        <section style={{ marginTop: "1.5rem" }}>
+          <button className="btn btn-secondary" onClick={() => { setCategoryId(null); resetFrom("category"); }}><ArrowLeft size={16} /> {selectedSkill.skill}</button>
+          <div className="panel" style={{ marginTop: "1rem" }}>
+            <p className="page-eyebrow">{selectedCategory.name}</p>
+            <h2 style={{ margin: 0 }}>{selectedSkill.skill} · Learning path</h2>
+            <p className="page-sub" style={{ marginBottom: 0 }}>Five modules. Open a module to see its units/lessons, then open a lesson to study it from beginning to end.</p>
+          </div>
+          <div className="card-grid" style={{ marginTop: "1rem" }}>
+            {selectedCategory.modules.map((module, index) => (
+              <button key={module.id} className="panel" style={{ textAlign: "left", cursor: "pointer", border: "1px solid var(--border)" }} onClick={() => { setModuleId(module.id); resetFrom("module"); }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
+                  <div>
+                    <span className="chip-static">Module {index + 1}</span>
+                    <h3 style={{ margin: ".65rem 0 .35rem" }}>{module.title.replace(/^Module \d+ — /, "")}</h3>
+                    <p className="page-sub" style={{ margin: 0 }}>{module.description}</p>
+                  </div>
+                  <ChevronRight />
+                </div>
+                <div style={{ marginTop: ".85rem", fontSize: ".82rem", color: "var(--muted-foreground)" }}>
+                  {countCompleted(module.lessons || [])}/{module.lessons?.length || 0} lessons completed
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : !selectedLesson ? (
+        <section style={{ marginTop: "1.5rem" }}>
+          <button className="btn btn-secondary" onClick={() => { setModuleId(null); resetFrom("module"); }}><ArrowLeft size={16} /> {selectedCategory.name}</button>
+          <div className="panel" style={{ marginTop: "1rem" }}>
+            <p className="page-eyebrow">{selectedCategory.name}</p>
+            <h2 style={{ margin: 0 }}>{selectedModule.title}</h2>
+            <p className="page-sub" style={{ marginBottom: 0 }}>{selectedModule.description}</p>
+          </div>
+          <div style={{ display: "grid", gap: ".8rem", marginTop: "1rem" }}>
+            {selectedModule.lessons.map((lesson, index) => (
+              <button key={lesson.id} className="panel" style={{ textAlign: "left", cursor: "pointer", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }} onClick={() => setLessonId(lesson.id)}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: ".9rem" }}>
+                  {lesson.completed ? <CheckCircle2 size={20} /> : <BookOpen size={20} />}
+                  <div>
+                    <div style={{ fontSize: ".74rem", color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".08em" }}>Unit {index + 1}</div>
+                    <strong>{lesson.title}</strong>
+                    <p className="page-sub" style={{ margin: ".25rem 0 0" }}>{lesson.description}</p>
+                  </div>
+                </div>
+                <ChevronRight size={18} />
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section style={{ marginTop: "1.5rem" }}>
+          <button className="btn btn-secondary" onClick={() => setLessonId(null)}><ArrowLeft size={16} /> All lessons</button>
+          <article className="panel" style={{ marginTop: "1rem", maxWidth: "900px", padding: "clamp(1.25rem, 4vw, 3rem)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
               <div>
-                <FileText
-                  size={18}
-                  style={{
-                    verticalAlign: "middle",
-                    marginRight: ".5rem",
-                  }}
-                />
-                <strong>{selectedModule.skill} — Learning Module</strong>
+                <p className="page-eyebrow">{selectedSkill.skill} · {selectedCategory.name} · {selectedModule.title}</p>
+                <div style={{ fontSize: ".74rem", color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".08em" }}>Complete lesson</div>
+                <h2 style={{ margin: ".35rem 0 .7rem" }}>{selectedLesson.title}</h2>
               </div>
+              <button className="btn btn-secondary" onClick={downloadLessonPdf}><Download size={15} /> PDF</button>
+            </div>
 
-              <button
-                type="button"
-                onClick={() => setSelectedModule(null)}
-                aria-label="Close module"
-                style={{
-                  border: 0,
-                  background: "transparent",
-                  cursor: "pointer",
-                  padding: ".3rem",
-                }}
-              >
-                <X size={20} />
+            <div style={{ lineHeight: 1.8 }}>
+              <p>{selectedLesson.lesson?.intro}</p>
+              {(selectedLesson.lesson?.sections || []).map((section, index) => (
+                <section key={index} style={{ marginTop: "1.5rem" }}>
+                  <h3>{section.heading}</h3>
+                  <p style={{ whiteSpace: "pre-wrap" }}>{section.body}</p>
+                </section>
+              ))}
+              <div style={{ marginTop: "1.5rem" }}>
+                <h3>Example / practice</h3>
+                <pre style={{ overflowX: "auto", padding: "1rem", borderRadius: "12px", background: "var(--surface-muted, #f5f7fa)", whiteSpace: "pre-wrap" }}>{selectedLesson.lesson?.example}</pre>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "2rem", padding: "1rem", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", gap: ".75rem", flexWrap: "wrap", alignItems: "center" }}>
+              <div>
+                <strong>{selectedLesson.completed ? "Lesson completed ✓" : "Finish this lesson when you can explain and practise the concept."}</strong>
+                <p className="page-sub" style={{ margin: ".25rem 0 0" }}>Completion is saved to your SkillSwap account.</p>
+              </div>
+              <button className="btn btn-primary" onClick={() => updateLessonCompletion(selectedLesson, !selectedLesson.completed)}>
+                {selectedLesson.completed ? "Mark as incomplete" : "Mark lesson complete"}
               </button>
             </div>
+          </article>
+        </section>
+      )}
 
-            <div
-              ref={lessonRef}
-              style={{
-                overflowY: "auto",
-                flex: 1,
-                padding: "2rem 1rem",
-              }}
-            >
-              <article
-                style={{
-                  width: "min(720px, 100%)",
-                  margin: "0 auto",
-                  background: "#fff",
-                  padding: "clamp(1.5rem, 4vw, 3rem)",
-                  boxShadow: "0 5px 22px rgba(20,30,45,.10)",
-                  color: "#182334",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: ".72rem",
-                    letterSpacing: ".12em",
-                    textTransform: "uppercase",
-                    color: "#667085",
-                  }}
-                >
-                  SkillSwap Learning Document
-                </div>
-
-                <h2 style={{ margin: ".5rem 0 0" }}>
-                  {selectedModule.skill}
-                </h2>
-
-                <p style={{ color: "#667085" }}>
-                  {selectedModule.description}
-                </p>
-
-                {(selectedModule.topics || []).map((topic, index) => (
-                  <section
-                    key={topic.id}
-                    style={{
-                      padding: "1.5rem 0",
-                      borderBottom: "1px solid #e1e5ea",
-                      lineHeight: 1.75,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: ".75rem",
-                        textTransform: "uppercase",
-                        color: "#667085",
-                        letterSpacing: ".08em",
-                      }}
-                    >
-                      Topic {index + 1}
-                    </div>
-
-                    <h3 style={{ margin: ".35rem 0 .7rem" }}>
-                      {topic.title}
-                    </h3>
-
-                    <p>{topic.lesson?.intro || topic.description}</p>
-
-                    {(topic.lesson?.sections || []).map((section, sectionIndex) => (
-                      <div
-                        key={section.id || section.heading || sectionIndex}
-                        style={{ marginTop: "1.2rem" }}
-                      >
-                        <h4 style={{ marginBottom: ".4rem" }}>
-                          {section.heading}
-                        </h4>
-
-                        <p style={{ whiteSpace: "pre-wrap" }}>
-                          {section.body}
-                        </p>
-                      </div>
-                    ))}
-
-                    {topic.lesson?.example && (
-                      <pre
-                        style={{
-                          overflowX: "auto",
-                          padding: "1rem",
-                          borderRadius: "10px",
-                          background: "#f4f6f8",
-                          fontSize: ".82rem",
-                          lineHeight: 1.6,
-                          whiteSpace: "pre-wrap",
-                        }}
-                      >
-                        {topic.lesson.example}
-                      </pre>
-                    )}
-                  </section>
-                ))}
-
-                <section
-                  style={{
-                    marginTop: "2rem",
-                    padding: "1rem",
-                    border: "1px solid #d8dde5",
-                    borderRadius: "12px",
-                    background: "#fafbfc",
-                  }}
-                >
-                  <h3 style={{ marginTop: 0 }}>End of module</h3>
-                  <p style={{ marginBottom: 0 }}>
-                    You have reached the end. The module can now be marked
-                    complete automatically.
-                  </p>
-                </section>
-
-                <div style={{ height: "220px" }} />
-              </article>
-            </div>
-
-            <div
-              style={{
-                padding: ".8rem 1rem",
-                background: "#fff",
-                borderTop: "1px solid #d8dde5",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: ".75rem",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: ".8rem",
-                  color: "#667085",
-                }}
-              >
-                {canComplete
-                  ? "✓ You reached the end of the module"
-                  : "Scroll through all topics to the end"}
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: ".55rem",
-                }}
-              >
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={downloadModulePdf}
-                >
-                  <Download size={15} /> PDF
-                </button>
-
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={!canComplete || selectedModule.completed}
-                  onClick={completeModule}
-                >
-                  {selectedModule.completed
-                    ? "Module completed ✓"
-                    : "Complete module"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {selectedLesson && (
+        <button
+          type="button"
+          aria-label="Close lesson"
+          onClick={() => { setSkillId(null); setCategoryId(null); setModuleId(null); setLessonId(null); }}
+          style={{ display: "none" }}
+        >
+          <X />
+        </button>
       )}
     </div>
   );
