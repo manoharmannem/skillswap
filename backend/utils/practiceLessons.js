@@ -283,7 +283,7 @@ export function lessonFor(skill, category, moduleTitle, topicTitle) {
   ];
 
   return {
-    intro: `Welcome to ${topicTitle}. This is Unit lesson in ${moduleTitle} for ${category || skill}. Read from top to bottom, work through the example, complete the mini challenge, and only then mark the lesson complete.`,
+    intro: `Welcome to ${topicTitle}. This is a complete lesson in ${moduleTitle} for ${category || skill}. Read from top to bottom, work through the example, complete the mini challenge, and only then mark the lesson complete.`,
     sections,
     example: isArray
       ? `// Practice example\nconst values = [10, 20, 30, 40];\nconsole.log(values[0]);\n\n// Change the values and practise accessing, updating,\n// adding, removing, or looping depending on your language.`
