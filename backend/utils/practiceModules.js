@@ -1,61 +1,87 @@
-import { lessonFor } from "./practiceLessons.js";
+import { buildLessonTopics } from "./practiceLessons.js";
 
-const TOPIC_LIBRARY = {
-  javascript: ["Variables, types & functions","Arrays, objects & modern syntax","DOM and events","Async JavaScript & APIs","Build a small JavaScript project"],
-  react: ["Components & JSX","Props and reusable components","State and event handling","Effects, forms & API calls","Build a complete React feature"],
-  python: ["Syntax, variables & data types","Conditions, loops & functions","Collections & modules","Files, errors & packages","Build a Python project"],
-  html: ["Document structure & semantic HTML","Forms, links & media","Accessibility basics","Responsive page structure","Build a complete webpage"],
-  css: ["Selectors, box model & cascade","Flexbox layouts","CSS Grid layouts","Responsive design","Build a responsive interface"],
-  sql: ["Tables, keys & basic queries","Filtering, sorting & grouping","Joins and relationships","Aggregations & window functions","Build practical SQL reports"],
-  "data analysis": ["Data cleaning fundamentals","Exploring datasets","Descriptive statistics","Visualization & insights","Complete a data analysis workflow"],
-  "public speaking": ["Structure a clear talk","Voice, pace & body language","Storytelling techniques","Handling questions & nerves","Deliver a short presentation"],
-  "guitar chords": ["Basic posture & chord shapes","Common open chords","Chord transitions","Strumming patterns","Play a complete progression"],
-  spanish: ["Greetings & introductions","Everyday vocabulary","Basic sentence patterns","Conversation practice","Real-world listening & speaking"],
-  "watercolour basics": ["Materials & brush control","Colour mixing","Wet-on-wet technique","Light, shadow & composition","Paint a complete study"],
+const CATEGORY_LIBRARY = {
+  coding: ["C", "C++", "Java", "Python", "JavaScript"],
+  programming: ["C", "C++", "Java", "Python", "JavaScript"],
+  "web development": ["HTML", "CSS", "JavaScript", "React"],
+  "data analysis": ["Python", "SQL", "Excel"],
+  design: ["UI/UX", "Figma", "Visual Design"],
+  "public speaking": ["Public Speaking", "Presentation Skills", "Storytelling"],
+  guitar: ["Guitar", "Guitar Chords"],
+  spanish: ["Beginner Spanish", "Conversation", "Grammar", "Listening"],
+  "watercolour": ["Watercolour Basics", "Colour & Mixing", "Techniques", "Composition"]
 };
 
-function keyFor(skill) {
-  return String(skill || "").trim().toLowerCase().replace(/\s+/g, " ");
+const MODULES = [
+  ["foundations", "Module 1 — Foundations", "Build the essential concepts from the ground up."],
+  ["core", "Module 2 — Core Skills", "Practise the main techniques with guided lessons."],
+  ["structures", "Module 3 — Working with Real Problems", "Connect concepts and solve practical tasks."],
+  ["projects", "Module 4 — Practical Projects", "Apply what you learned in complete small projects."],
+  ["advanced", "Module 5 — Next Level", "Strengthen your skills and prepare for independent work."]
+];
+
+const keyFor = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+function categoriesFor(skill) {
+  const key = keyFor(skill);
+  return CATEGORY_LIBRARY[key] || [String(skill || "").trim() || "General"];
 }
 
-function topicsFor(skill) {
-  const key = keyFor(skill);
-  const titles = TOPIC_LIBRARY[key] || [
-    `Introduction to ${skill}`,
-    `Core concepts of ${skill}`,
-    `Guided practice in ${skill}`,
-    `Intermediate techniques in ${skill}`,
-    `Build a practical ${skill} project`,
-  ];
-  return titles.map((title, index) => ({
-    id: `topic-${key.replace(/[^a-z0-9]+/g, "-")}-${index + 1}`,
-    title,
-    description: `Learn and practise ${title.toLowerCase()}.`,
-    lesson: lessonFor(skill, title),
+function buildCategory(skill, category, categoryIndex) {
+  const categoryKey = keyFor(category);
+  return {
+    id: `category-${categoryKey.replace(/[^a-z0-9]+/g, "-")}-${categoryIndex + 1}`,
+    name: category,
+    description: `Learn ${category} through five structured modules and complete lessons.`,
     completed: false,
-  }));
+    modules: MODULES.map(([id, title, description], index) => ({
+      id: `${categoryKey.replace(/[^a-z0-9]+/g, "-")}-module-${index + 1}`,
+      key: id,
+      title,
+      description,
+      completed: false,
+      lessons: buildLessonTopics(skill, category, id, title)
+    }))
+  };
 }
 
 export function createPracticeModules(learningSkills = []) {
-  return [...new Set((Array.isArray(learningSkills) ? learningSkills : []).map((s) => String(s).trim()).filter(Boolean))]
-    .map((skill, index) => ({
-      id: `practice-${keyFor(skill).replace(/[^a-z0-9]+/g, "-")}-${index + 1}`,
-      skill,
-      level: "Beginner",
-      description: `A guided learning path for ${skill}, broken into practical topics.`,
-      completed: false,
-      topics: topicsFor(skill),
-    }));
+  return [...new Set(
+    (Array.isArray(learningSkills) ? learningSkills : [])
+      .map((s) => String(s).trim())
+      .filter(Boolean)
+  )].map((skill, index) => ({
+    id: `practice-${keyFor(skill).replace(/[^a-z0-9]+/g, "-")}-${index + 1}`,
+    skill,
+    level: "Beginner",
+    description: `A structured ${skill} learning path: choose a category, complete five modules, then study each lesson from start to finish.`,
+    completed: false,
+    categories: categoriesFor(skill).map((category, categoryIndex) => buildCategory(skill, category, categoryIndex))
+  }));
 }
 
 export function practiceMatchesLearningSkills(modules = [], learningSkills = []) {
   const expected = new Set((learningSkills || []).map(keyFor).filter(Boolean));
   const actual = new Set((modules || []).map((m) => keyFor(m.skill)).filter(Boolean));
-  const skillsMatch = expected.size === actual.size && [...expected].every((skill) => actual.has(skill));
-  const lessonsPresent = (modules || []).every((module) =>
-    Array.isArray(module.topics) &&
-    module.topics.length > 0 &&
-    module.topics.every((topic) => topic.lesson && Array.isArray(topic.lesson.sections))
+  if (expected.size !== actual.size || ![...expected].every((skill) => actual.has(skill))) return false;
+
+  return (modules || []).every((skill) =>
+    Array.isArray(skill.categories) &&
+    skill.categories.length > 0 &&
+    skill.categories.every((category) =>
+      Array.isArray(category.modules) &&
+      category.modules.length === 5 &&
+      category.modules.every((module) =>
+        Array.isArray(module.lessons) &&
+        module.lessons.length > 0 &&
+        module.lessons.every((lesson) =>
+          lesson.lesson &&
+          Array.isArray(lesson.lesson.sections) &&
+          lesson.lesson.sections.length >= 5
+        )
+      )
+    )
   );
-  return skillsMatch && lessonsPresent;
 }
+
+export { keyFor };
