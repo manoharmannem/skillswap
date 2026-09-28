@@ -29,6 +29,20 @@ export const updatePractice = async (req, res) => {
               id: topic.id,
               title: topic.title,
               description: topic.description || "",
+              lesson: topic.lesson ? {
+                intro: topic.lesson.intro || "",
+                sections: Array.isArray(topic.lesson.sections)
+                  ? topic.lesson.sections.map((section) => ({
+                      heading: section.heading || "",
+                      body: section.body || "",
+                    }))
+                  : [],
+                example: topic.lesson.example || "",
+              } : {
+                intro: "",
+                sections: [],
+                example: "",
+              },
               completed: Boolean(topic.completed),
             }))
           : [],
