@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user.js";
 import Profile from "../models/profile.js";
+import { createPracticeModules, practiceMatchesLearningSkills } from "../utils/practiceModules.js";
 
 const defaultPracticeModules = [
   { id: "p1", skill: "React Fundamentals", level: "Beginner", description: "Components, props, and state — the building blocks.", completed: true },
@@ -44,7 +45,7 @@ export const register = async (req, res) => {
     if (existing) return res.status(409).json({ message: "An account with that email already exists" });
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await User.create({ name: name.trim(), email: normalizedEmail, passwordHash, skills, learningSkills, credits: 4, practiceModules: defaultPracticeModules });
+    const user = await User.create({ name: name.trim(), email: normalizedEmail, passwordHash, skills, learningSkills, credits: 4, practiceModules: createPracticeModules(learningSkills) });
     await Profile.create({ user: user._id, name: user.name, email: user.email, skills, learningSkills });
 
     const token = makeToken(user);
@@ -74,8 +75,8 @@ export const login = async (req, res) => {
     if (!valid) return res.status(401).json({ message: "Incorrect email or password" });
 
     const hydrated = await User.findById(user._id);
-    if (!hydrated.practiceModules?.length) {
-      hydrated.practiceModules = defaultPracticeModules;
+    if (!practiceMatchesLearningSkills(hydrated.practiceModules, hydrated.learningSkills)) {
+      hydrated.practiceModules = createPracticeModules(hydrated.learningSkills);
       if (hydrated.credits == null) hydrated.credits = 4;
       await hydrated.save();
     }
