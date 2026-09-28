@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
-import { CheckCircle2, ChevronDown, Circle, FileText, LockKeyhole, X, Download } from "lucide-react";
+import { ChevronDown, FileText, X, Download } from "lucide-react";
 import { jsPDF } from "jspdf";
 
 const filters = ["All", "Not started", "Completed"];
@@ -32,13 +32,13 @@ export default function Practice() {
 
     const onScroll = () => {
       const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 24;
-      if (atBottom) setCanComplete(true);
+      if (atBottom) {\n        setCanComplete(true);\n        if (!selectedModule.completed) completeModule();\n      }
     };
 
     node.addEventListener("scroll", onScroll);
     onScroll();
     return () => node.removeEventListener("scroll", onScroll);
-  }, [selectedTopic]);
+  }, [selectedModule]);
 
   function openModule(module) {
     setSelectedModule(module);
