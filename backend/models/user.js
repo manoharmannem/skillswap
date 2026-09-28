@@ -1,5 +1,46 @@
 import mongoose from "mongoose";
 
+const lessonSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true },
+    title: { type: String, required: true },
+    description: { type: String, default: "" },
+    lesson: {
+      intro: { type: String, default: "" },
+      sections: [{
+        heading: { type: String, default: "" },
+        body: { type: String, default: "" },
+      }],
+      example: { type: String, default: "" },
+    },
+    completed: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const learningModuleSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true },
+    key: { type: String, required: true },
+    title: { type: String, required: true },
+    description: { type: String, default: "" },
+    completed: { type: Boolean, default: false },
+    lessons: { type: [lessonSchema], default: [] },
+  },
+  { _id: false }
+);
+
+const practiceCategorySchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    description: { type: String, default: "" },
+    completed: { type: Boolean, default: false },
+    modules: { type: [learningModuleSchema], default: [] },
+  },
+  { _id: false }
+);
+
 const practiceModuleSchema = new mongoose.Schema(
   {
     id: { type: String, required: true },
@@ -7,20 +48,7 @@ const practiceModuleSchema = new mongoose.Schema(
     level: { type: String, required: true },
     description: { type: String, required: true },
     completed: { type: Boolean, default: false },
-    topics: [{
-      id: { type: String, required: true },
-      title: { type: String, required: true },
-      description: { type: String, default: "" },
-      lesson: {
-        intro: { type: String, default: "" },
-        sections: [{
-          heading: { type: String, default: "" },
-          body: { type: String, default: "" },
-        }],
-        example: { type: String, default: "" },
-      },
-      completed: { type: Boolean, default: false },
-    }],
+    categories: { type: [practiceCategorySchema], default: [] },
   },
   { _id: false }
 );
