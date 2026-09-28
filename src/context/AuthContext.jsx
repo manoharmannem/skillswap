@@ -92,8 +92,8 @@ export function AuthProvider({ children }) {
 
   async function updatePracticeModules(practiceModules) {
     try {
-      await api("/api/practice", { method: "PUT", body: JSON.stringify({ modules: practiceModules }) });
-      setUser((prev) => prev ? { ...prev, practiceModules } : prev);
+      const data = await api("/api/practice", { method: "PUT", body: JSON.stringify({ modules: practiceModules }) });
+      setUser((prev) => prev ? { ...prev, practiceModules: data.modules || practiceModules } : prev);
       return { success: true };
     } catch (error) { return { error: error.message }; }
   }
