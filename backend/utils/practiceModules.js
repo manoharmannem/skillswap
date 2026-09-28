@@ -51,5 +51,11 @@ export function createPracticeModules(learningSkills = []) {
 export function practiceMatchesLearningSkills(modules = [], learningSkills = []) {
   const expected = new Set((learningSkills || []).map(keyFor).filter(Boolean));
   const actual = new Set((modules || []).map((m) => keyFor(m.skill)).filter(Boolean));
-  return expected.size === actual.size && [...expected].every((skill) => actual.has(skill));
+  const skillsMatch = expected.size === actual.size && [...expected].every((skill) => actual.has(skill));
+  const lessonsPresent = (modules || []).every((module) =>
+    Array.isArray(module.topics) &&
+    module.topics.length > 0 &&
+    module.topics.every((topic) => topic.lesson && Array.isArray(topic.lesson.sections))
+  );
+  return skillsMatch && lessonsPresent;
 }
