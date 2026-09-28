@@ -1,5 +1,13 @@
 import mongoose from "mongoose";
 
+const lessonSourceSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    url: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const lessonSchema = new mongoose.Schema(
   {
     id: { type: String, required: true },
@@ -12,6 +20,7 @@ const lessonSchema = new mongoose.Schema(
         body: { type: String, default: "" },
       }],
       example: { type: String, default: "" },
+      sources: { type: [lessonSourceSchema], default: [] },
     },
     completed: { type: Boolean, default: false },
   },
