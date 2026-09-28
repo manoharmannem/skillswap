@@ -263,14 +263,19 @@ export default function Practice() {
                 <LockKeyhole size={15} />
                 {canComplete ? "Lesson read to the end" : "Scroll to the end to unlock completion"}
               </div>
-              <button
-                type="button"
-                disabled={!canComplete || selectedTopic.completed}
-                onClick={completeTopic}
-                className="btn btn-primary"
-              >
-                {selectedTopic.completed ? "Topic completed ✓" : "Mark topic complete"}
-              </button>
+              <div style={{ display: "flex", gap: ".55rem", alignItems: "center" }}>
+                <button type="button" className="btn btn-secondary" onClick={downloadLessonPdf}>
+                  <Download size={15} /> PDF
+                </button>
+                <button
+                  type="button"
+                  disabled={!canComplete || selectedTopic.completed}
+                  onClick={completeTopic}
+                  className="btn btn-primary"
+                >
+                  {selectedTopic.completed ? "Topic completed ✓" : "Mark topic complete"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
