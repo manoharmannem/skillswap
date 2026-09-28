@@ -21,6 +21,12 @@ const cleanLesson = (lesson = {}) => ({
       }))
     : [],
   example: lesson.example || "",
+  sources: Array.isArray(lesson.sources)
+    ? lesson.sources.map((source) => ({
+        title: source.title || "",
+        url: source.url || "",
+      })).filter((source) => source.title && source.url)
+    : [],
 });
 
 const cleanLessons = (lessons = []) => (Array.isArray(lessons) ? lessons : []).map((lesson) => ({
