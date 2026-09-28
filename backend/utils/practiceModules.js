@@ -77,7 +77,8 @@ export function practiceMatchesLearningSkills(modules = [], learningSkills = [])
         module.lessons.every((lesson) =>
           lesson.lesson &&
           Array.isArray(lesson.lesson.sections) &&
-          lesson.lesson.sections.length >= 5
+          lesson.lesson.sections.length >= 9 &&
+          Array.isArray(lesson.lesson.sources)
         )
       )
     )
