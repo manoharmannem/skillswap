@@ -1,3 +1,5 @@
+import { lessonFor } from "./practiceLessons.js";
+
 const TOPIC_LIBRARY = {
   javascript: ["Variables, types & functions","Arrays, objects & modern syntax","DOM and events","Async JavaScript & APIs","Build a small JavaScript project"],
   react: ["Components & JSX","Props and reusable components","State and event handling","Effects, forms & API calls","Build a complete React feature"],
@@ -27,8 +29,9 @@ function topicsFor(skill) {
   ];
   return titles.map((title, index) => ({
     id: `topic-${key.replace(/[^a-z0-9]+/g, "-")}-${index + 1}`,
-    title: `Module ${index + 1}: ${title}`,
+    title,
     description: `Learn and practise ${title.toLowerCase()}.`,
+    lesson: lessonFor(skill, title),
     completed: false,
   }));
 }
@@ -39,7 +42,7 @@ export function createPracticeModules(learningSkills = []) {
       id: `practice-${keyFor(skill).replace(/[^a-z0-9]+/g, "-")}-${index + 1}`,
       skill,
       level: "Beginner",
-      description: `A guided learning path for ${skill}, broken into practical modules.`,
+      description: `A guided learning path for ${skill}, broken into practical topics.`,
       completed: false,
       topics: topicsFor(skill),
     }));
