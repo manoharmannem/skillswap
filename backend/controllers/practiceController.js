@@ -12,6 +12,48 @@ export const getPractice = async (req, res) => {
   }
 };
 
+const cleanLesson = (lesson = {}) => ({
+  intro: lesson.intro || "",
+  sections: Array.isArray(lesson.sections)
+    ? lesson.sections.map((section) => ({
+        heading: section.heading || "",
+        body: section.body || "",
+      }))
+    : [],
+  example: lesson.example || "",
+});
+
+const cleanLessons = (lessons = []) => (Array.isArray(lessons) ? lessons : []).map((lesson) => ({
+  id: lesson.id,
+  title: lesson.title,
+  description: lesson.description || "",
+  lesson: cleanLesson(lesson.lesson),
+  completed: Boolean(lesson.completed),
+}));
+
+const cleanModules = (modules = []) => (Array.isArray(modules) ? modules : []).map((module) => {
+  const lessons = cleanLessons(module.lessons);
+  return {
+    id: module.id,
+    key: module.key,
+    title: module.title,
+    description: module.description || "",
+    lessons,
+    completed: lessons.length > 0 ? lessons.every((lesson) => lesson.completed) : Boolean(module.completed),
+  };
+});
+
+const cleanCategories = (categories = []) => (Array.isArray(categories) ? categories : []).map((category) => {
+  const modules = cleanModules(category.modules);
+  return {
+    id: category.id,
+    name: category.name,
+    description: category.description || "",
+    modules,
+    completed: modules.length > 0 ? modules.every((module) => module.completed) : Boolean(category.completed),
+  };
+});
+
 export const updatePractice = async (req, res) => {
   try {
     const incoming = Array.isArray(req.body.modules) ? req.body.modules : [];
@@ -19,42 +61,29 @@ export const updatePractice = async (req, res) => {
 
     const modules = incoming
       .filter((module) => allowedSkills.has(String(module.skill || "").trim().toLowerCase()))
-      .map((module) => ({
-        id: module.id,
-        skill: module.skill,
-        level: module.level || "Beginner",
-        description: module.description || "",
-        topics: Array.isArray(module.topics)
-          ? module.topics.map((topic) => ({
-              id: topic.id,
-              title: topic.title,
-              description: topic.description || "",
-              lesson: topic.lesson ? {
-                intro: topic.lesson.intro || "",
-                sections: Array.isArray(topic.lesson.sections)
-                  ? topic.lesson.sections.map((section) => ({
-                      heading: section.heading || "",
-                      body: section.body || "",
-                    }))
-                  : [],
-                example: topic.lesson.example || "",
-              } : {
-                intro: "",
-                sections: [],
-                example: "",
-              },
-              completed: Boolean(topic.completed),
-            }))
-          : [],
-        completed: Array.isArray(module.topics) && module.topics.length > 0
-          ? module.topics.every((topic) => Boolean(topic.completed))
-          : Boolean(module.completed),
-      }));
+      .map((module) => {
+        const categories = cleanCategories(module.categories);
+        return {
+          id: module.id,
+          skill: module.skill,
+          level: module.level || "Beginner",
+          description: module.description || "",
+          categories,
+          completed: categories.length > 0 ? categories.every((category) => category.completed) : Boolean(module.completed),
+        };
+      });
 
-    req.user.practiceModules = modules;
+    if (!modules.length && allowedSkills.size) {
+      req.user.practiceModules = createPracticeModules(req.user.learningSkills);
+    } else {
+      req.user.practiceModules = modules;
+    }
+
     await req.user.save();
     res.json({ modules: req.user.practiceModules });
   } catch (error) {
     res.status(500).json({ message: "Failed to update practice modules", error: error.message });
   }
 };
+
+export { practiceMatchesLearningSkills };
