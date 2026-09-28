@@ -216,15 +216,21 @@ const TOPIC_SETS = {
 };
 
 const COURSE_SOURCES = {
+  c:[{title:"cppreference — C language reference",url:"https://en.cppreference.com/c/language"}],
+  "c++":[{title:"cppreference — C++ language reference",url:"https://en.cppreference.com/cpp/language"}],
+  java:[{title:"Dev.java — Java learning",url:"https://dev.java/learn/"}],
+  python:[{title:"Python — The Python Tutorial",url:"https://docs.python.org/3/tutorial/"}],
+  javascript:[{title:"MDN Web Docs — JavaScript",url:"https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting"}],
   html:[{title:"MDN Web Docs — HTML learning",url:"https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content"}],
   css:[{title:"MDN Web Docs — CSS",url:"https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Styling_basics"}],
-  javascript:[{title:"MDN Web Docs — JavaScript",url:"https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting"}],
   react:[{title:"React — Passing Props",url:"https://react.dev/learn/passing-props-to-a-component"},{title:"React — State",url:"https://react.dev/learn/state-a-components-memory"},{title:"React — Managing State",url:"https://react.dev/learn/managing-state"}],
+  sql:[{title:"PostgreSQL — SQL tutorial",url:"https://www.postgresql.org/docs/17/tutorial.html"}],
   excel:[{title:"Microsoft Support — Excel",url:"https://support.microsoft.com/en-us/excel/"}],
-  figma:[{title:"Figma Learn — Design for beginners",url:"https://help.figma.com/hc/en-us/sections/30880632542743-Figma-Design-for-beginners"}],
   "ui/ux":[{title:"Figma Learn",url:"https://help.figma.com/hc/en-us/"}],
+  figma:[{title:"Figma Learn — Design for beginners",url:"https://help.figma.com/hc/en-us/sections/30880632542743-Figma-Design-for-beginners"}],
   "public speaking":[{title:"Toastmasters — Public Speaking Tips",url:"https://www.toastmasters.org/resources/public-speaking-tips"}],
   "presentation skills":[{title:"Toastmasters — Preparing a Speech",url:"https://www.toastmasters.org/resources/public-speaking-tips/preparing-a-speech"}],
+  storytelling:[{title:"Toastmasters — Public Speaking Tips",url:"https://www.toastmasters.org/resources/public-speaking-tips"}],
   guitar:[{title:"Fender — Essential Beginner Chords",url:"https://www.fender.com/articles/chords/essential-beginner-chords-g-c-d"},{title:"Fender — Beginner Guitar Scales",url:"https://www.fender.com/articles/scales/5-essential-guitar-scales-for-beginners"}],
   "guitar chords":[{title:"Fender — Essential Beginner Chords",url:"https://www.fender.com/articles/chords/essential-beginner-chords-g-c-d"}],
   "beginner spanish":[{title:"Instituto Cervantes — Spanish A1",url:"https://nuevadelhi.cervantes.es/en/spanish_courses/students/spanish_general_courses/spanish_courses_level_a1.htm"}],
