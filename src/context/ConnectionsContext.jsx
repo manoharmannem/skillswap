@@ -11,16 +11,40 @@ function normalizeConnection(c) {
 export function ConnectionsProvider({ children }) {
   const { user } = useAuth();
   const [connections, setConnections] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [totalUnread, setTotalUnread] = useState(0);
 
   const load = useCallback(async () => {
     if (!user) { setConnections([]); return; }
-    try { const data = await api("/api/connections"); setConnections((data.connections || []).map(normalizeConnection)); }
-    catch (error) { console.error("Connections load failed:", error); }
+    try {
+      const data = await api("/api/connections");
+      setConnections((data.connections || []).map(normalizeConnection));
+    } catch (error) { console.error("Connections load failed:", error); }
+  }, [user]);
+
+  const loadMessagesSummary = useCallback(async () => {
+    if (!user) { setConversations([]); setTotalUnread(0); return; }
+    try {
+      const data = await api("/api/messages");
+      const next = data.conversations || [];
+      setConversations(next);
+      setTotalUnread(next.reduce((sum, c) => sum + Number(c.unreadCount || 0), 0));
+    } catch (error) { console.error("Messages notification load failed:", error); }
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
 
-  const findConnectionBetween = useCallback((a, b) => connections.find((c) => (c.fromEmail === a && c.toEmail === b) || (c.fromEmail === b && c.toEmail === a)) || null, [connections]);
+  useEffect(() => {
+    loadMessagesSummary();
+    if (!user) return undefined;
+    const interval = window.setInterval(loadMessagesSummary, 3000);
+    return () => window.clearInterval(interval);
+  }, [user, loadMessagesSummary]);
+
+  const findConnectionBetween = useCallback(
+    (a, b) => connections.find((c) => (c.fromEmail === a && c.toEmail === b) || (c.fromEmail === b && c.toEmail === a)) || null,
+    [connections]
+  );
 
   const getStatusWith = useCallback((otherEmail) => {
     if (!user?.email || !otherEmail || otherEmail === user.email) return { status: "self" };
@@ -46,8 +70,11 @@ export function ConnectionsProvider({ children }) {
   }
 
   async function changeRequest(id, status) {
-    try { await api(`/api/connections/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }); await load(); return { success: true }; }
-    catch (error) { return { error: error.message }; }
+    try {
+      await api(`/api/connections/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+      await load();
+      return { success: true };
+    } catch (error) { return { error: error.message }; }
   }
 
   const myConnections = connections.filter((c) => c.fromEmail === user?.email || c.toEmail === user?.email);
@@ -56,21 +83,43 @@ export function ConnectionsProvider({ children }) {
   const acceptedConnections = myConnections.filter((c) => c.status === "accepted");
 
   async function getConversations() {
-    try { const data = await api("/api/messages"); return data.conversations || []; }
-    catch { return []; }
+    try {
+      const data = await api("/api/messages");
+      const next = data.conversations || [];
+      setConversations(next);
+      setTotalUnread(next.reduce((sum, c) => sum + Number(c.unreadCount || 0), 0));
+      return next;
+    } catch { return []; }
   }
 
   async function getMessagesFor(otherUserId) {
-    try { const data = await api(`/api/messages/${otherUserId}`); return data.messages || []; }
-    catch { return []; }
+    try {
+      const data = await api(`/api/messages/${otherUserId}`);
+      await loadMessagesSummary();
+      return data.messages || [];
+    } catch { return []; }
   }
 
   async function sendMessage(receiverId, text) {
-    try { const data = await api("/api/messages", { method: "POST", body: JSON.stringify({ receiver: receiverId, message: text }) }); return { success: true, message: data.data }; }
-    catch (error) { return { error: error.message }; }
+    const message = String(text || "").trim();
+    if (!message) return { error: "Please write a message" };
+    try {
+      const data = await api("/api/messages", { method: "POST", body: JSON.stringify({ receiver: receiverId, message }) });
+      await loadMessagesSummary();
+      return { success: true, message: data.data };
+    } catch (error) { return { error: error.message }; }
   }
 
-  const value = { connections, reload: load, getStatusWith, sendRequest, acceptRequest: (id) => changeRequest(id, "accepted"), rejectRequest: (id) => changeRequest(id, "rejected"), cancelRequest: (id) => changeRequest(id, "cancelled"), incomingRequests, outgoingRequests, acceptedConnections, getConversations, getMessagesFor, sendMessage };
+  const value = {
+    connections, reload: load, getStatusWith, sendRequest,
+    acceptRequest: (id) => changeRequest(id, "accepted"),
+    rejectRequest: (id) => changeRequest(id, "rejected"),
+    cancelRequest: (id) => changeRequest(id, "cancelled"),
+    incomingRequests, outgoingRequests, acceptedConnections,
+    conversations, totalUnread, getConversations, getMessagesFor, sendMessage,
+    refreshMessageNotifications: loadMessagesSummary,
+  };
+
   return <ConnectionsContext.Provider value={value}>{children}</ConnectionsContext.Provider>;
 }
 
