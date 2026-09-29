@@ -22,16 +22,27 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const refreshPractice = async () => {
+    try {
+      const data = await api("/api/practice");
+      setUser((prev) => prev ? { ...prev, practiceModules: data.modules || [] } : prev);
+    } catch (error) {
+      console.error("Practice load failed:", error);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       if (!getToken()) { setLoading(false); return; }
       try {
         const data = await api("/api/auth/me");
         setUser(normalizeUser(data.user));
-        await refreshDirectory();
+        setLoading(false);
+
+        // Load large secondary datasets after the authenticated shell is ready.
+        void Promise.allSettled([refreshPractice(), refreshDirectory()]);
       } catch {
         setToken(null);
-      } finally {
         setLoading(false);
       }
     })();
@@ -60,7 +71,8 @@ export function AuthProvider({ children }) {
       let next = normalizeUser(data.user);
       next = await migrateLegacyProfile(next);
       setUser(next);
-      await refreshDirectory();
+      // Keep login fast: directory + Practice are secondary data.
+      void Promise.allSettled([refreshPractice(), refreshDirectory()]);
       return { user: next };
     } catch (error) { return { error: error.message }; }
   }
@@ -72,7 +84,8 @@ export function AuthProvider({ children }) {
       let next = normalizeUser(data.user);
       next = await migrateLegacyProfile(next);
       setUser(next);
-      await refreshDirectory();
+      // Keep login fast: directory + Practice are secondary data.
+      void Promise.allSettled([refreshPractice(), refreshDirectory()]);
       return { user: next };
     } catch (error) { return { error: error.message }; }
   }
@@ -109,7 +122,7 @@ export function AuthProvider({ children }) {
   function listUsers() { return users; }
   function findUserByEmail(email) { return users.find((u) => u.email === String(email || "").trim().toLowerCase()) || null; }
 
-  const value = { user, loading, signUp, signIn, signOut, updateProfile, updatePracticeModules, recordQuizScore, listUsers, findUserByEmail, refreshDirectory };
+  const value = { user, loading, signUp, signIn, signOut, updateProfile, updatePracticeModules, recordQuizScore, listUsers, findUserByEmail, refreshDirectory, refreshPractice };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
