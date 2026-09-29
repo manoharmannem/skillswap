@@ -12,7 +12,7 @@ export default function Messages() {
   const { email: activeEmail } = useParams();
   const navigate = useNavigate();
   const { user, findUserByEmail } = useAuth();
-  const { getConversations, getMessagesFor, sendMessage, getStatusWith, refreshMessageNotifications } = useConnections();
+  const { getConversations, getMessagesFor, sendMessage, getStatusWith } = useConnections();
   const toast = useToast();
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -41,7 +41,7 @@ export default function Messages() {
     };
 
     loadConversation();
-    const interval = window.setInterval(loadConversation, 2500);
+    const interval = window.setInterval(loadConversation, 4000);
     return () => { cancelled = true; window.clearInterval(interval); };
   }, [activeUserId]);
 
@@ -58,10 +58,10 @@ export default function Messages() {
     if (result.error) { toast.error(result.error); return; }
 
     setDraft("");
-    const next = await getMessagesFor(activeUserId);
-    setMessages(next);
+    if (result.message) {
+      setMessages((prev) => [...prev, result.message]);
+    }
     await loadConversations();
-    await refreshMessageNotifications();
   }
 
   const status = activeEmail ? getStatusWith(activeEmail).status : null;
