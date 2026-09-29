@@ -23,7 +23,6 @@ function safeUser(user) {
     learningSkills: user.learningSkills || [],
     bio: user.bio || "",
     credits: user.credits ?? 0,
-    practiceModules: user.practiceModules || [],
     quizScores: Object.fromEntries(user.quizScores || []),
   };
 }
