@@ -37,7 +37,7 @@ export function ConnectionsProvider({ children }) {
   useEffect(() => {
     loadMessagesSummary();
     if (!user) return undefined;
-    const interval = window.setInterval(loadMessagesSummary, 3000);
+    const interval = window.setInterval(loadMessagesSummary, 5000);
     return () => window.clearInterval(interval);
   }, [user, loadMessagesSummary]);
 
@@ -95,7 +95,6 @@ export function ConnectionsProvider({ children }) {
   async function getMessagesFor(otherUserId) {
     try {
       const data = await api(`/api/messages/${otherUserId}`);
-      await loadMessagesSummary();
       return data.messages || [];
     } catch { return []; }
   }
@@ -105,7 +104,6 @@ export function ConnectionsProvider({ children }) {
     if (!message) return { error: "Please write a message" };
     try {
       const data = await api("/api/messages", { method: "POST", body: JSON.stringify({ receiver: receiverId, message }) });
-      await loadMessagesSummary();
       return { success: true, message: data.data };
     } catch (error) { return { error: error.message }; }
   }
