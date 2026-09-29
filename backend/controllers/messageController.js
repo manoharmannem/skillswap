@@ -7,7 +7,8 @@ async function canMessage(senderId, receiverId) {
       { from: senderId, to: receiverId, status: "accepted" },
       { from: receiverId, to: senderId, status: "accepted" },
     ],
-  });
+  }).select("_id").lean();
+
   return Boolean(connection);
 }
 
@@ -36,7 +37,8 @@ export const sendMessage = async (req, res) => {
 
     const data = await Message.findById(created._id)
       .populate("sender", "name email")
-      .populate("receiver", "name email");
+      .populate("receiver", "name email")
+      .lean();
 
     res.status(201).json({ data });
   } catch (error) {
@@ -60,7 +62,8 @@ export const getConversation = async (req, res) => {
     })
       .sort({ createdAt: 1 })
       .populate("sender", "name email")
-      .populate("receiver", "name email");
+      .populate("receiver", "name email")
+      .lean();
 
     await Message.updateMany(
       { sender: otherUserId, receiver: req.user._id, isRead: false },
@@ -75,40 +78,72 @@ export const getConversation = async (req, res) => {
 
 export const getConversations = async (req, res) => {
   try {
-    const messages = await Message.find({
-      $or: [{ sender: req.user._id }, { receiver: req.user._id }],
-    })
-      .sort({ createdAt: -1 })
-      .populate("sender", "name email")
-      .populate("receiver", "name email");
+    const userId = req.user._id;
 
-    const seen = new Map();
+    // Return one row per conversation instead of loading every historical message.
+    // This keeps the inbox fast even after the account has many messages.
+    const conversations = await Message.aggregate([
+      {
+        $match: {
+          $or: [{ sender: userId }, { receiver: userId }],
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $eq: ["$sender", userId] },
+              "$receiver",
+              "$sender",
+            ],
+          },
+          lastMessage: { $first: "$$ROOT" },
+          unreadCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$receiver", userId] },
+                    { $eq: ["$isRead", false] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user",
+          pipeline: [{ $project: { name: 1, email: 1 } }],
+        },
+      },
+      { $unwind: "$user" },
+      {
+        $project: {
+          _id: 0,
+          user: 1,
+          unreadCount: 1,
+          lastMessage: {
+            _id: "$lastMessage._id",
+            sender: "$lastMessage.sender",
+            receiver: "$lastMessage.receiver",
+            message: "$lastMessage.message",
+            createdAt: "$lastMessage.createdAt",
+            isRead: "$lastMessage.isRead",
+          },
+        },
+      },
+      { $sort: { "lastMessage.createdAt": -1 } },
+    ]);
 
-    for (const message of messages) {
-      const other =
-        message.sender._id.toString() === req.user._id.toString()
-          ? message.receiver
-          : message.sender;
-
-      const key = other._id.toString();
-
-      if (!seen.has(key)) {
-        seen.set(key, {
-          user: other,
-          lastMessage: message,
-          unreadCount: 0,
-        });
-      }
-
-      if (
-        message.receiver._id.toString() === req.user._id.toString() &&
-        !message.isRead
-      ) {
-        seen.get(key).unreadCount += 1;
-      }
-    }
-
-    res.json({ conversations: [...seen.values()] });
+    res.json({ conversations });
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch conversations",
