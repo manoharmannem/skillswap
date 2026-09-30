@@ -29,7 +29,7 @@ export default function Practice() {
     if (user?.learningSkills?.length && !(user.practiceModules || []).length) {
       void refreshPractice();
     }
-  }, [user?.id, user?.learningSkills?.length, user?.practiceModules?.length, refreshPractice]);
+  }, [user?.id, user?.learningSkills?.length, user?.practiceModules?.length]);
 
 
   useEffect(() => {
