@@ -11,7 +11,7 @@ const countCompleted = (items = []) => items.filter((item) => item.completed).le
 
 
 export default function Practice() {
-  const { user, updatePracticeModules } = useAuth();
+  const { user, updatePracticeModules, refreshPractice } = useAuth();
   const toast = useToast();
   const [filter, setFilter] = useState("All");
   const [skillId, setSkillId] = useState(null);
@@ -24,6 +24,12 @@ export default function Practice() {
   const selectedCategory = selectedSkill?.categories?.find((item) => item.id === categoryId) || null;
   const selectedModule = selectedCategory?.modules?.find((item) => item.id === moduleId) || null;
   const selectedLesson = selectedModule?.lessons?.find((item) => item.id === lessonId) || null;
+
+  useEffect(() => {
+    if (user?.learningSkills?.length && !(user.practiceModules || []).length) {
+      void refreshPractice();
+    }
+  }, [user?.id, user?.learningSkills?.length, user?.practiceModules?.length, refreshPractice]);
 
 
   useEffect(() => {
