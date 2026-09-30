@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user.js";
 import Profile from "../models/profile.js";
-import { createPracticeModules, practiceMatchesLearningSkills } from "../utils/practiceModules.js";
+import { practiceMatchesLearningSkills } from "../utils/practiceModules.js";
 
 const defaultPracticeModules = [
   { id: "p1", skill: "React Fundamentals", level: "Beginner", description: "Components, props, and state — the building blocks.", completed: true },
@@ -74,9 +74,8 @@ export const login = async (req, res) => {
     if (!valid) return res.status(401).json({ message: "Incorrect email or password" });
 
     const hydrated = await User.findById(user._id);
-    if (!practiceMatchesLearningSkills(hydrated.practiceModules, hydrated.learningSkills)) {
-      hydrated.practiceModules = createPracticeModules(hydrated.learningSkills);
-      if (hydrated.credits == null) hydrated.credits = 4;
+    if (hydrated.credits == null) {
+      hydrated.credits = 4;
       await hydrated.save();
     }
     return res.json({ message: "Login successful", token: makeToken(hydrated), user: safeUser(hydrated) });
@@ -86,9 +85,5 @@ export const login = async (req, res) => {
 };
 
 export const me = async (req, res) => {
-  if (!practiceMatchesLearningSkills(req.user.practiceModules, req.user.learningSkills)) {
-    req.user.practiceModules = createPracticeModules(req.user.learningSkills);
-    await req.user.save();
-  }
   res.json({ user: safeUser(req.user) });
 };
