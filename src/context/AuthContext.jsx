@@ -69,10 +69,12 @@ export function AuthProvider({ children }) {
     try {
       const data = await api("/api/auth/register", { method: "POST", body: JSON.stringify({ name: fullName.trim(), email: email.trim().toLowerCase(), password, skills, learningSkills }) });
       setToken(data.token);
-      let next = normalizeUser(data.user);
-      next = await migrateLegacyProfile(next);
+      const next = normalizeUser(data.user);
       setUser(next);
-      // Keep authentication fast. Secondary data loads independently.
+      // Never block navigation on legacy-profile migration or directory loading.
+      void migrateLegacyProfile(next).then((migrated) => {
+        if (migrated && migrated !== next) setUser(migrated);
+      });
       void refreshDirectory();
       return { user: next };
     } catch (error) { return { error: error.message }; }
@@ -82,10 +84,12 @@ export function AuthProvider({ children }) {
     try {
       const data = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email: email.trim().toLowerCase(), password }) });
       setToken(data.token);
-      let next = normalizeUser(data.user);
-      next = await migrateLegacyProfile(next);
+      const next = normalizeUser(data.user);
       setUser(next);
-      // Keep authentication fast. Secondary data loads independently.
+      // Never block navigation on legacy-profile migration or directory loading.
+      void migrateLegacyProfile(next).then((migrated) => {
+        if (migrated && migrated !== next) setUser(migrated);
+      });
       void refreshDirectory();
       return { user: next };
     } catch (error) { return { error: error.message }; }
