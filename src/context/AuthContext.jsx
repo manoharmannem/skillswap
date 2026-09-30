@@ -71,8 +71,8 @@ export function AuthProvider({ children }) {
       let next = normalizeUser(data.user);
       next = await migrateLegacyProfile(next);
       setUser(next);
-      // Keep login fast: directory + Practice are secondary data.
-      void Promise.allSettled([refreshPractice(), refreshDirectory()]);
+      // Keep authentication fast. Secondary data loads independently.
+      void refreshDirectory();
       return { user: next };
     } catch (error) { return { error: error.message }; }
   }
@@ -84,8 +84,8 @@ export function AuthProvider({ children }) {
       let next = normalizeUser(data.user);
       next = await migrateLegacyProfile(next);
       setUser(next);
-      // Keep login fast: directory + Practice are secondary data.
-      void Promise.allSettled([refreshPractice(), refreshDirectory()]);
+      // Keep authentication fast. Secondary data loads independently.
+      void refreshDirectory();
       return { user: next };
     } catch (error) { return { error: error.message }; }
   }
