@@ -2,8 +2,6 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
-import { seedDatabase } from "./seed.js";
-
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import skillRoutes from "./routes/skillRoutes.js";
@@ -47,23 +45,12 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
 
 let databaseReadyPromise;
-let seedReadyPromise;
 
 async function ensureDatabase() {
   if (!databaseReadyPromise) {
     databaseReadyPromise = connectDB();
   }
   await databaseReadyPromise;
-
-  if (!seedReadyPromise) {
-    seedReadyPromise = seedDatabase().catch((error) => {
-      seedReadyPromise = null;
-      console.error("SkillSwap seed failed:", error.message);
-      throw error;
-    });
-  }
-
-  await seedReadyPromise;
 }
 
 app.get("/", async (req, res) => {
