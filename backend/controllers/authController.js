@@ -73,12 +73,11 @@ export const login = async (req, res) => {
     }
     if (!valid) return res.status(401).json({ message: "Incorrect email or password" });
 
-    const hydrated = await User.findById(user._id);
-    if (hydrated.credits == null) {
-      hydrated.credits = 4;
-      await hydrated.save();
+    if (user.credits == null) {
+      user.credits = 4;
+      await user.save();
     }
-    return res.json({ message: "Login successful", token: makeToken(hydrated), user: safeUser(hydrated) });
+    return res.json({ message: "Login successful", token: makeToken(user), user: safeUser(user) });
   } catch (error) {
     return res.status(500).json({ message: "Login failed", error: error.message });
   }
