@@ -39,8 +39,9 @@ export function AuthProvider({ children }) {
         setUser(normalizeUser(data.user));
         setLoading(false);
 
-        // Load large secondary datasets after the authenticated shell is ready.
-        void Promise.allSettled([refreshPractice(), refreshDirectory()]);
+        // Keep the authenticated shell fast. Practice is loaded only when the Practice page is opened.
+        // The directory can load in the background without blocking the first dashboard render.
+        void refreshDirectory();
       } catch {
         setToken(null);
         setLoading(false);
